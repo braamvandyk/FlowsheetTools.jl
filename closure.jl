@@ -16,9 +16,21 @@ function closemb(boundary::BalanceBoundary; totalweight=1.0, elementweight=1.0)
 
     ins = length(inlets)
     outs = length(outlets)
-    factors = ones(ins + outs)
+    factors = ones(ins + outs) # Correction factors for flows
 
+    # Check for viable closure, i.e. there is at least some mass entering and some mass leaving.
+    allzero = true
+    for stream in inlets
+        stream.totalmassflow > 0.0 && (allzero = false)
+    end
+    allzero && throw(DomainError(x, "at least one inlet must have non-zero flow"))
    
+    allzero = true
+    for stream in outlets
+        stream.totalmassflow > 0.0 && (allzero = false)
+    end
+    allzero && throw(DomainError(x, "at least one outlet must have non-zero flow"))
+
     function f(factors)
         total_in = sum(factors[1:ins] .* inlets)
         total_out = sum(factors[ins+1:end] .* outlets)
@@ -34,6 +46,7 @@ function closemb(boundary::BalanceBoundary; totalweight=1.0, elementweight=1.0)
         atomerror = abs2(sum(values(atomclosures)) - numatoms)
         return totalweight*masserror + elementweight*atomerror
     end
+
 
     res = optimize(f, factors)
     optfactors = res.minimizer
