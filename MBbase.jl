@@ -1,4 +1,4 @@
-using MacroTools, Optim, JSON3, StructTypes, CSV, DataFrames
+using MacroTools, Optim, JSON3, StructTypes, CSV, DataFrames, Statistics
 
 # Dicts for periodic table with atomic number => symbol => atomic mass
 include("Atoms.jl")
