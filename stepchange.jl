@@ -1,7 +1,8 @@
 """
     function findsteps(data)
 
-Finds step changes in the data.
+Finds step changes in the data. When reconciling data, you should first do step change detection,
+then reconcile between steps to make sure you can calculate meaningful uncertainties in the data
 """
 function findsteps(data; window=3, noiseperc=0.9)
     fwdmean = similar(data)
@@ -37,7 +38,7 @@ function findsteps(data; window=3, noiseperc=0.9)
     end
 
     # Now look for the largest deltas in forward and reverse moving windows again
-    # This allows an arbitrary number of local maxima to be founds
+    # This allows an arbitrary number of local maxima to be found
     fwdmax = similar(data)
     revmax = similar(data)
 

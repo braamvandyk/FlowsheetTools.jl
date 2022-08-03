@@ -19,8 +19,10 @@ struct StreamHistory
 
     # Number of historic data points
     numdata::Integer
-
+    
     comps::Array{Component, 1}
+
+    timestamps::Array{DateTime, 1}
     # Specifiy mass flows, calculate mole flows
     massflows::Array{Float64, 2}
     moleflows::Array{Float64, 2}
@@ -61,16 +63,18 @@ end
 
 
 """
-    StreamHistory(name, comps, massflowshistory)
+    StreamHistory(name, comps, timestamps, massflowshistory)
 
 Constructor for a stream history object that defines the stream name and component flows
 for various past measurements.
 The mass flows are specified and a molar composition and atomic molar flows calculated.
 The mass flow history is passed as a matrix where each column is a datum
 """
-function StreamHistory(name, comps, massflowshistory)
+function StreamHistory(name, comps, timestamps, massflowshistory)
     numcomps = length(comps)
     numdata = size(massflowshistory, 2)
+
+    length(timestamps) != numdata && error("length mismatch between data and timestamps.")
 
     moleflowshistory = zeros(numcomps, numdata)
     atomflowshistory = Array{Dict{String, Float64}, 1}(undef, numdata)
@@ -94,7 +98,7 @@ function StreamHistory(name, comps, massflowshistory)
         atomflowshistory[datum] = atomflows
     end
 
-    StreamHistory(name, numdata, comps, massflowshistory, moleflowshistory, totalmassflowhistory, atomflowshistory)
+    StreamHistory(name, numdata, comps, timestamps, massflowshistory, moleflowshistory, totalmassflowhistory, atomflowshistory)
 end
 
 
@@ -133,7 +137,16 @@ Extend the addition operator to add to streams histories to each other - a mixer
 It is assumed that the streams histories will have different components in arbitrary order.
 """
 function Base.:+(a::StreamHistory, b::StreamHistory)
-    a.numdata != b.numdata && error("All streams must must have similar history lengths.")
+    # Check that the data lengths are the same.
+    # The constructor already checks that the timestamp length matches the data length.
+    a.numdata != b.numdata && throw(DimensionMismatch("length of a not equal to size of b"))
+
+    # Check that the timestamps are identical!
+    for i in eachindex(a.timestamps)
+        a.timestamps[i] != b.timestamps[i] && error("timestamp values do not match at entry $i")
+    end
+
+
     comps = copy(a.comps)
     massflows = copy(a.massflows)
 
@@ -152,7 +165,7 @@ function Base.:+(a::StreamHistory, b::StreamHistory)
         end
     end
 
-    StreamHistory(a.name * "-" * b.name, comps, massflows)
+    StreamHistory(a.name * "-" * b.name, comps, a.timestamps, massflows)
 end
 
 
@@ -163,8 +176,6 @@ Extend the multiplication operator to scale a stream's flows by a scalar value.
 Used in mass balance reconciliations to apply flow corrections.
 """
 function Base.:*(a::T, b::Stream) where T <: Real
-
-
     Stream(b.name, b.comps, a .* b.massflows)
 end
 
@@ -176,7 +187,7 @@ Extend the multiplication operator to scale a stream history's flows by a scalar
 Used in mass balance reconciliations to apply flow corrections.
 """
 function Base.:*(a::T, b::StreamHistory) where T <: Real
-    StreamHistory(b.name, b.comps, a .* b.massflows)
+    StreamHistory(b.name, b.comps, b.timestamps, a .* b.massflows)
 end
 
 
@@ -196,7 +207,7 @@ end
 Copy a stream. Can also be used to rename a stream.
 """
 function copystreamhistory(s::StreamHistory, name::String)
-    str = StreamHistory(name, s.comps, s.massflows, s.moleflows, s.totalmassflow, s.atomflows)
+    str = StreamHistory(name, s.numdata, s.comps, s.timestamps, s.massflows, s.moleflows, s.totalmassflow, s.atomflows)
 end
 
 
@@ -213,7 +224,7 @@ function Base.show(io::IO, s::Stream)
     println(io, "-"^20)
     atoms = collect(keys(s.atomflows)) 
     flows = collect(values(s.atomflows))
-    for i = 1:length(atoms)
+    for i in eachindex(atoms)
         println(io, " ", rpad(atoms[i],2), lpad(prettyround(flows[i]), 17))
     end
 end
@@ -256,7 +267,7 @@ end
 
 
 """
-    @atream begin
+    @stream begin
         ethylene --> 2.0
         hydrogen --> 6.2
     end "Feed"
@@ -275,12 +286,12 @@ end
 
 
 function readstreamhistory(streamname, comps)
-    df = CSV.File(joinpath("streamhistories", streamname * ".csv")) |> DataFrame
+    df = CSV.read(joinpath("streamhistories", streamname * ".csv"), DataFrame, dateformat="yyyy/mm/dd HH:MM")
     massflows = zeros(size(df, 1), length(comps))
     
     for (i, comp) in enumerate(comps)
         massflows[:, i] = df[:, comp.name]
     end
 
-    return StreamHistory(streamname, comps, transpose(massflows))
+    return StreamHistory(streamname, comps, df.TimeStamp, transpose(massflows))
 end

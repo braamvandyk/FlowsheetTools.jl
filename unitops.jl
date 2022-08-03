@@ -22,11 +22,18 @@ struct UnitOpHistory
     # Inner constructor to validate input data
     function UnitOpHistory(name, numdata, inlets, outlets)
         numdata = inlets[1].numdata
+        timestamps = inlets[1].timestamps
         for inlet in inlets
-            inlet.numdata != numdata && error("All streams must must have similar history lengths.")
+            inlet.numdata != numdata && error("all streams must must have similar history lengths.")
+            for j in eachindex(timestamps)
+                timestamps[j] != inlet.timestamps[j] && error("all stream histories must have matching timestamps.")
+            end
         end
         for outlet in outlets
-            outlet.numdata != numdata && error("All streams must must have similar history lengths.")
+            outlet.numdata != numdata && error("all streams must must have similar history lengths.")
+            for j in eachindex(timestamps)
+                timestamps[j] != inlet.timestamps[j] && error("all stream histories must have matching timestamps.")
+            end
         end
         new(name, numdata, inlets, outlets)
     end

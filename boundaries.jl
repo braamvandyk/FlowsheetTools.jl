@@ -186,7 +186,7 @@ function Base.show(io::IO, b::BalanceBoundary)
 
     atoms = collect(keys(b.atomclosures)) 
     closures = collect(values(b.atomclosures))
-    for i = 1:length(atoms)
+    for i in eachindex(atoms)
         println(io, " ", rpad(atoms[i],2), lpad(prettyround(closures[i]), 14))
     end    
 end
