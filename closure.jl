@@ -10,30 +10,36 @@ weighted by *totalweight* and *elementweight* respectively and the squared weigh
 Results are returned as a dict of streams and corrections to their flows.
 """
 function closemb(boundary::BalanceBoundary; totalweight=1.0, elementweight=1.0)         
+    # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
+    # all of the unit ops must have the same stream list
+    streamlist = first(boundary.unitlist.list).second.streamlist
+    
     corrections = Dict{String, Float64}()
+    
     inlets = boundary.inlets
     outlets = boundary.outlets
 
     ins = length(inlets)
     outs = length(outlets)
+    
     factors = ones(ins + outs) # Correction factors for flows
 
     # Check for viable closure, i.e. there is at least some mass entering and some mass leaving.
     allzero = true
     for stream in inlets
-        stream.totalmassflow > 0.0 && (allzero = false)
+        streamlist[stream].totalmassflow > 0.0 && (allzero = false)
     end
     allzero && throw(DomainError(x, "at least one inlet must have non-zero flow"))
    
     allzero = true
-    for stream in outlets
-        stream.totalmassflow > 0.0 && (allzero = false)
+    for stream in inlets
+        streamlist[stream].totalmassflow > 0.0 && (allzero = false)
     end
-    allzero && throw(DomainError(x, "at least one outlet must have non-zero flow"))
+    allzero && throw(DomainError(x, "at least one inlet must have non-zero flow"))
 
     function f(factors)
-        total_in = sum(factors[1:ins] .* inlets)
-        total_out = sum(factors[ins+1:end] .* outlets)
+        total_in = sum(factors[1:ins] .* streamlist[inlets])
+        total_out = sum(factors[ins+1:end] .* streamlist[outlets])
         masserror = abs2(total_out.totalmassflow/total_in.totalmassflow - 1.0)
 
         atomclosures = Dict{String, Float64}()
@@ -53,11 +59,11 @@ function closemb(boundary::BalanceBoundary; totalweight=1.0, elementweight=1.0)
 
     i = 1
     for stream in inlets
-        corrections[stream.name] = optfactors[i]
+        corrections[stream] = optfactors[i]
         i += 1
     end
     for stream in outlets
-        corrections[stream.name] = optfactors[i]
+        corrections[stream] = optfactors[i]
         i += 1
     end
 
@@ -66,20 +72,26 @@ end
 
 
 function closemb(boundary::BalanceBoundaryHistory; totalweight=1.0, elementweight=1.0)         
+    # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
+    # all of the unit ops must have the same stream list
+    streamlist = first(boundary.unitlist.list).second.streamlist  
+     
     corrections = Dict{String, Float64}()
+
     inlets = boundary.inlets
     outlets = boundary.outlets
 
     ins = length(inlets)
     outs = length(outlets)
+
     factors = ones(ins + outs)
 
-    numdata = inlets[1].numdata
+    numdata = streamlist[inlets[1]].numdata
    
     function f(factors)
         # Since inlets and outlets are arrays of StreamHistory, summing them produces StreamHistory objects
-        total_in = sum(factors[1:ins] .* inlets)
-        total_out = sum(factors[ins+1:end] .* outlets)
+        total_in = sum(factors[1:ins] .* streamlist[inlets])
+        total_out = sum(factors[ins+1:end] .* streamlist[outlets])
         
         masserror = 0.0
         atomerror = 0.0
@@ -103,11 +115,11 @@ function closemb(boundary::BalanceBoundaryHistory; totalweight=1.0, elementweigh
 
     i = 1
     for stream in inlets
-        corrections[stream.name] = optfactors[i]
+        corrections[stream] = optfactors[i]
         i += 1
     end
     for stream in outlets
-        corrections[stream.name] = optfactors[i]
+        corrections[stream] = optfactors[i]
         i += 1
     end
 

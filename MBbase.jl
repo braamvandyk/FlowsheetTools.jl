@@ -1,4 +1,9 @@
 using MacroTools, Optim, JSON3, StructTypes, CSV, DataFrames, Statistics, Dates
+import Base.setindex!
+import Base.getindex
+import Base.length
+
+
 
 # Dicts for periodic table with atomic number => symbol => atomic mass
 include("Atoms.jl")
@@ -12,8 +17,4 @@ include("boundaries.jl")
 include("kpis.jl")
 include("closure.jl")
 
-syscomps = Component[]
-sysstreams = Stream[]
-sysunitOps = UnitOp[]
-sysboundaries = BalanceBoundary[]
 

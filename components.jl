@@ -1,4 +1,4 @@
-#----Component---------------
+#----Definitions-----------------------
 
 struct Component
     name
@@ -9,6 +9,14 @@ end
 StructTypes.StructType(::Type{Component}) = StructTypes.Struct()
 
 
+struct ComponentList
+    list
+end
+
+
+#----Constructors----------------------
+
+
 """
     Component(name, atoms, counts)
 
@@ -17,9 +25,31 @@ Constructor for molecular species that defines the atomic make-up.
 function Component(name, atoms, counts)
     Mr = 0.0
     for (i, atom) in enumerate(atoms)
-        Mr += counts[i]*atomweights[atom]
+        Mr += counts[i]*Atoms.atomweights[atom]
     end
     Component(name, atoms, counts, Mr)
+end
+
+
+function ComponentList()
+    l = Dict{String, Component}()
+    return ComponentList(l)
+end
+
+
+#----Base overloads--------------------
+
+
+function Base.setindex!(A::ComponentList, X::Component, idx::String)
+        A.list[idx] = X
+end
+
+function Base.getindex(A::ComponentList, idx::String)
+    return A.list[idx]
+end
+
+function Base.length(A::ComponentList)
+    return length(A.list)
 end
 
 
@@ -34,8 +64,11 @@ function Base.show(io::IO, c::Component)
 end
 
 
+#----Macros----------------------------
+
+
 # Parsing an expression to extract atoms and counts for use in macro @comp
-function parse_comp(ex, name)
+function parse_comp(ex, name, complist)
     atoms = String[]
     counts = Int[]
     
@@ -43,7 +76,7 @@ function parse_comp(ex, name)
         match_atom = @capture(line, atom_sym_ --> count_)
         if match_atom
             atom = String(atom_sym)
-            if !(atom in values(atomsymbols))
+            if !(atom in values(Atoms.atomsymbols))
                 error("Invalid symbol for atom specified.")
             end
             if atom in atoms
@@ -55,7 +88,7 @@ function parse_comp(ex, name)
             end
         end
     end
-    return :(comp = Component($name, $atoms, $counts))
+    return :($complist[$name] = Component($name, $atoms, $counts))
 end
 
 
@@ -63,13 +96,16 @@ end
     @comp begin
         C --> 2
         H --> 6
-    end "Ethane"
+    end "Ethane" syscomps
 
-Defines a Component() with the specified name and atomic composition.
+Defines a Component with the specified name and atomic composition and add it to syscomps::ComponenList
 """
-macro comp(ex::Expr, name::String)      
-    return parse_comp(ex, name)
+macro comp(ex::Expr, name::String, complist::Symbol)      
+    return parse_comp(ex, name, complist)
 end
+
+
+#----Utilities-------------------------
 
 
 """
@@ -77,8 +113,8 @@ end
 
 Write a Component struct to a JSON file.
 """
-function writecomponent(comp)
-    filename = lowercase(joinpath("components", comp.name * ".json"))
+function writecomponent(filename, comp)
+    filename = lowercase(filename)
     open(filename, "w") do io
         JSON3.pretty(io, comp)
     end
@@ -86,29 +122,36 @@ end
 
 
 """
-    function readcomp(filename)
+    function readcomp(filename::String)
 
 Read a Component struct from a JSON file.
 """
-function readcomponent(filename)
+function readcomponent(filename::String)
     open(filename, "r") do io
         JSON3.read(io, Component)
     end
 end
 
-function readcomponentlist(filenames)
+
+"""
+    function readcomponentlist(complist::ComponentList, folder::String, filenames::Vector{String})
+
+Read a list of components into a ComponentList
+The folder is specified and `filenames` contains a list of filenames without extentions.
+
+"""
+function readcomponentlist!(complist::ComponentList, folder::String, filenames::Vector{String})
     count = 0
-    res = Component[]
-    available = readdir("components/")
+    # Get the list of files available in the folder
+    available = readdir(folder)
     
     for fn in filenames
-        fname = lowercase(fn * ".json")
-        if fname in available
-            comp = readcomponent(joinpath("components", fname))
-            push!(res, comp)
+        fname = fn * ".json"
+        if lowercase(fname) in available
+            complist[fn] = readcomponent(joinpath(folder, fname))
             count += 1
         end
     end
 
-    return res, count
+    return count
 end

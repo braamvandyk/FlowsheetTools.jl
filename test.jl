@@ -1,63 +1,98 @@
+include("MBbase.jl")
+
+
+
+
+
+
+
+
 #----Testing-----------------
+syscomps = ComponentList()
 
-# Define components via constructor
-ethylene = Component("C2H4", ["C", "H"], [2, 4])
-
-# or via macro
-hydrogen = @comp begin
+@comp begin
     H --> 2
-end "H2"
+end "Hydrogen" syscomps
 
-ethane = @comp begin
+@comp begin
     C --> 2
     H --> 6
-end "Ethane"
+end "Ethane" syscomps
+
+@comp begin
+    C --> 2
+    H --> 4
+end "Ethylene" syscomps
 
 
-# Define stream via constructor
-feedcomps = [ethylene, hydrogen]
-feedflows = [ethylene.Mr, 2*hydrogen.Mr]
-feed = Stream("Feed", feedcomps, feedflows)
 
-# or via macro
-prod = @stream begin
-    ethylene --> ethylene.Mr*0.1
-    ethane --> ethane.Mr*0.9
-    hydrogen --> hydrogen.Mr*1.1
-end "Product"
+sysstreams = StreamList()
 
-# You get the same result
-C2c = Stream("C2", [ethylene, ethane], [ethylene.Mr*0.1, ethane.Mr*0.9])
-C2m = @stream begin
-    ethylene --> ethylene.Mr*0.1
-    ethane --> ethane.Mr*0.9
-end "C2"
-C2c.comps ==C2m.comps
-C2c.massflows == C2m.massflows
-C2c.moleflows == C2m.moleflows
+@stream begin
+    "Ethylene" --> syscomps["Ethylene"].Mr*0.1
+    "Ethane" --> syscomps["Ethane"].Mr*0.9
+    "Hydrogen" --> syscomps["Hydrogen"].Mr*1.1
+end syscomps "Product" sysstreams
 
-# Copy a stream to change its name
-C2cc = copystream(C2c, "mystream")
+
+# Copy, rename and delete streams from the list
+copystream!(sysstreams, "Product", "mystream")
+copystream!(sysstreams, "Product", "mystream2"; factor=2.0)
+
 # Different name, so not identical
-!(C2cc == C2c)
-# But all the flows are the same
-C2c.atomflows == C2cc.atomflows
+sysstreams["Product"] == sysstreams["mystream"]
 
-# Multiply a stream to change all its flows by a scalar factor
-moreC2 = 2.0*C2c
-moreC2.totalmassflow ≈ 2.0*C2c.totalmassflow
+# But all the flows are the same
+sysstreams["Product"].atomflows == sysstreams["mystream"].atomflows
+
+renamestream!(sysstreams, "mystream", "dummy")
+deletestream!(sysstreams, "dummy")
+
+# Multiplication with a scalar
+sysstreams["Prod2"] = 2.0*sysstreams["Product"]
+sysstreams["Prod2"].totalmassflow ≈ 2.0 * sysstreams["Product"].totalmassflow
+
+
+
+
+
+
+
 
 # Test unit ops and mass balance boundaries
 # Define some streams
-H2 = Stream("H2", [hydrogen], [hydrogen.Mr*1.1])
-C2 = Stream("C2", [ethylene, ethane], [ethylene.Mr*0.1, ethane.Mr*0.9])
+sysstreams = StreamList()
+
+@stream begin
+    "Ethylene" --> syscomps["Ethylene"].Mr*1.0
+    "Hydrogen" --> syscomps["Hydrogen"].Mr*2.0
+end syscomps "Feed" sysstreams
+
+@stream begin
+    "Ethylene" --> syscomps["Ethylene"].Mr*0.1
+    "Ethane" --> syscomps["Ethane"].Mr*0.9
+    "Hydrogen" --> syscomps["Hydrogen"].Mr*1.1
+end syscomps "Product" sysstreams
+
+
+@stream begin
+    "Hydrogen" --> syscomps["Hydrogen"].Mr*1.1
+end syscomps "H2" sysstreams
+
+@stream begin
+    "Ethylene" --> syscomps["Ethylene"].Mr*0.1
+    "Ethane" --> syscomps["Ethane"].Mr*0.9
+end syscomps "C2" sysstreams
+
 
 # Define some unit ops
-reactor = UnitOp("RX101", [feed], [prod])
-membrane = UnitOp("MX101", [prod], [C2, H2])
+sysunitops = UnitOpList()
+
+sysunitops["Reactor"] = UnitOp("RX101", sysstreams, ["Feed"], ["Product"])
+sysunitops["Membrane"]  = UnitOp("MX101", sysstreams, ["Product"], ["C2", "H2"])
 
 # Define a mass balance boundary
-b = BalanceBoundary([reactor, membrane])
+b = BalanceBoundary(sysunitops, ["Reactor", "Membrane"])
 
 # Check the closures
 b.atomclosures
@@ -66,46 +101,54 @@ b.total_in.totalmassflow
 b.total_out.totalmassflow
 
 # And some defined KPIs
-conversion(b, ethane)
-conversion(b, ethylene)
-selectivity(b, ethylene, ethane)
+conversion(b, "Ethane")
+conversion(b, "Ethylene")
+selectivity(b, "Ethylene", "Ethane")
 
 # Now test the reconciliations
 # Change some flows to simulate measurement errors
-feed2 = copystream(0.95*feed, "Feed2")
-prod2 = copystream(1.01*prod, "Prod2")
+copystream!(sysstreams, "Feed", "Feed2"; factor=0.95)
+copystream!(sysstreams, "Product", "Prod2"; factor=1.01)
 
 # Define the unit ops and boundary
-reactor2 = UnitOp("RX101", [feed2], [prod2])
-membrane2 = UnitOp("MX101", [prod2], [C2, H2])
-b2 = BalanceBoundary([reactor2, membrane2])
+sysunitops["Reactor2"] = UnitOp("RX101", sysstreams, ["Feed2"], ["Prod2"])
+sysunitops["Membrane2"] = UnitOp("MX101", sysstreams, ["Prod2"], ["C2", "H2"])
+b2 = BalanceBoundary(sysunitops, ["Reactor2", "Membrane2"])
 
 # Get the correction factors on the inlets and outlets
 corrections = closemb(b2)
 
 # Test the pretty printing
-print(ethane)
-print(feed)
-print(membrane)
+print(syscomps["Ethane"])
+print(sysstreams["Feed"])
+print(sysunitops["Membrane"])
 print(b)
 
 # Read in a list of components
-comps, count = readcomponentlist(["Ethylene", "Ethane", "hydrogen"])
+syscomps2 = ComponentList()
+count = readcomponentlist!(syscomps2, "components", ["Ethylene", "Ethane", "Hydrogen"])
 count == 3
 
+
+
+# ----------------------------------------------------------------
+
+histstreams = StreamHistoryList()
 # Read in some stream histories
-feedhist = readstreamhistory("FeedStream", comps)
-prodhist = readstreamhistory("ProdStream", comps)
+histstreams["Feed"] = readstreamhistory(joinpath("streamhistories", "FeedStream.csv"), "Feed", syscomps)
+histstreams["Product"] = readstreamhistory(joinpath("streamhistories", "ProdStream.csv"), "Product", syscomps)
 
 # And mix them
-combhist = feedhist + prodhist
+histstreams["Comb"] = histstreams["Feed"] + histstreams["Product"]
+
 
 # And scale the result
-combhist = 2.0 * combhist
+histstreams["Comb"] = 2.0 * histstreams["Comb"]
 
 # Test UnitOpHistory
-RX101History = UnitOpHistory("RX101", [feedhist], [prodhist])
+histops = UnitOpHistoryList()
+histops["RX101"] = UnitOpHistory("RX101", histstreams, ["Feed"], ["Product"])
 
 # Test BalanceBoundaryHistory
-bh = BalanceBoundaryHistory([RX101History])
+bh = BalanceBoundaryHistory(histops, ["RX101"])
 corrections = closemb(bh)

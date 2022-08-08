@@ -5,13 +5,13 @@
 # with mass and elemental closures already calculated.
 
 """
-    conversion(b::BalanceBoundary, c::Component)
+    conversion(b::BalanceBoundary, component::String)
 
-Calculate the fractional conversion of the component (c) over the balance boundary (b)
+Calculate the fractional conversion of the component over the balance boundary
 """
-function conversion(b::BalanceBoundary, c::Component)
+function conversion(b::BalanceBoundary, component::String)
     # Find the component in the feed
-    i = findfirst(x->x==c, b.total_in.comps)
+    i = findfirst(x->x==component, b.total_in.comps)
     if isnothing(i)
         feed = 0.0
     else
@@ -19,7 +19,7 @@ function conversion(b::BalanceBoundary, c::Component)
     end
 
     # Find the component in the product
-    i = findfirst(x->x==c, b.total_out.comps)
+    i = findfirst(x->x==component, b.total_out.comps)
     if isnothing(i)
         prod = 0
     else
@@ -35,7 +35,7 @@ end
 
 Calculate the molar selectivity of the converted reactant to the product, over the balance boundary (b).
 """
-function selectivity(b, reactant, product)
+function selectivity(b::BalanceBoundary, reactant::String, product::String)
     # Find the reactant inflow
     i = findfirst(x->x==reactant, b.total_in.comps)
     if isnothing(i)

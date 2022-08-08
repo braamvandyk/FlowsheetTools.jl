@@ -2,8 +2,6 @@ module Atoms
 
 using DelimitedFiles
 
-export atomsymbols, atomweights
-
 _rawatoms = readdlm(joinpath("atoms", "atoms.csv"), ',')
 _atomnums = Int.(_rawatoms[:, 1])
 _atomsymbols = string.(_rawatoms[:, 2])

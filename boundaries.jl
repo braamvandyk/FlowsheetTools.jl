@@ -2,12 +2,13 @@
 
 struct BalanceBoundary
     # Units included in the boundary
-    units::Array{UnitOp, 1}
+    unitlist::UnitOpList
+    units::Array{String, 1}
 
     # Streams crossing the boundary limits
     # Calculate from inlets and outlets of included unit ops
-    inlets::Array{Stream, 1}
-    outlets::Array{Stream, 1}
+    inlets::Array{String, 1}
+    outlets::Array{String, 1}
 
     # Combined inlet and outlet streams
     total_in::Stream
@@ -23,15 +24,16 @@ end
 
 struct BalanceBoundaryHistory
     # Units included in the boundary
-    units::Array{UnitOpHistory, 1}
+    unitlist::UnitOpHistoryList
+    units::Array{String, 1}
 
     # Number of historic data points
     numdata::Integer
 
     # Streams crossing the boundary limits
     # Calculate from inlets and outlets of included unit ops
-    inlets::Array{StreamHistory, 1}
-    outlets::Array{StreamHistory, 1}
+    inlets::Array{String, 1}
+    outlets::Array{String, 1}
 
     # Combined inlet and outlet streams
     total_in::StreamHistory
@@ -44,14 +46,15 @@ struct BalanceBoundaryHistory
     atomclosures::Array{Dict{String, Float64}, 1}
 
 
-    function BalanceBoundaryHistory(units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
+    function BalanceBoundaryHistory(unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
         total_in.numdata != total_out.numdata && error("All in/outlets must must have similar history lengths.")
-        new(units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
+        new(unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
     end
 end
 
 
-function BalanceBoundary(units)
+function BalanceBoundary(unitlist, units)
+
 #Figure out which streams cross the boundary:
 #    1. Take all the input stream from the units
 #    2. Subtract the ones that are product stream, as they will be internal streams
@@ -62,11 +65,15 @@ function BalanceBoundary(units)
     outlets = Stream[]
 
     # 1. Take all the input stream from the units 
-    for unit in units
-        for feed in unit.inlets
-           push!(inlets, feed)
+    for unitname in units
+        unit = unitlist[unitname]
+
+        for feedname in unit.inlets
+            feed = unit.streamlist[feedname]
+            push!(inlets, feed)
         end
-        for prod in unit.outlets
+        for prodname in unit.outlets
+            prod = unit.streamlist[prodname]
             push!(outlets, prod)
         end
     end
@@ -89,6 +96,17 @@ function BalanceBoundary(units)
     # 2b. Now delete the ones we don't want
     inlets = inlets[keep_in]
     outlets = outlets[keep_out]
+
+    # 2c. And convert to list of names
+    inletnames = String[]
+    outletnames = String[]
+
+    for inlet in inlets
+        push!(inletnames, inlet.name)
+    end
+    for outlet in outlets
+        push!(outletnames, outlet.name)
+    end
 
     # Now add the inlets and outlets together to get one total inlet and one total outlet
     total_in = sum(inlets)
@@ -104,11 +122,11 @@ function BalanceBoundary(units)
         atomclosures[atom] = out/in
     end
 
-    BalanceBoundary(units, inlets, outlets, total_in, total_out, closure, atomclosures)
+    BalanceBoundary(unitlist, units, inletnames, outletnames, total_in, total_out, closure, atomclosures)
 end
 
 
-function BalanceBoundaryHistory(units)
+function BalanceBoundaryHistory(unitlist::UnitOpHistoryList, units::Vector{String})
     #Figure out which streams cross the boundary:
     #    1. Take all the input stream from the units
     #    2. Subtract the ones that are product stream, as they will be internal streams
@@ -119,11 +137,15 @@ function BalanceBoundaryHistory(units)
     outlets = StreamHistory[]
 
     # 1. Take all the input stream from the units 
-    for unit in units
-        for feed in unit.inlets
+    for unitname in units
+        unit = unitlist[unitname]
+
+        for feedname in unit.inlets
+            feed = unit.streamlist[feedname]
             push!(inlets, feed)
         end
-        for prod in unit.outlets
+        for prodname in unit.outlets
+            prod = unit.streamlist[prodname]
             push!(outlets, prod)
         end
     end
@@ -147,6 +169,17 @@ function BalanceBoundaryHistory(units)
     inlets = inlets[keep_in]
     outlets = outlets[keep_out]
 
+    # 2c. And convert to list of names
+    inletnames = String[]
+    outletnames = String[]
+
+    for inlet in inlets
+        push!(inletnames, inlet.name)
+    end
+    for outlet in outlets
+        push!(outletnames, outlet.name)
+    end
+
     # Now add the inlets and outlets together to get one total inlet and one total outlet
     total_in = sum(inlets)
     total_out = sum(outlets)
@@ -154,6 +187,7 @@ function BalanceBoundaryHistory(units)
     # Calculate the closures
     closure = total_out.totalmassflow./total_in.totalmassflow
     numdata = length(closure)
+
     atomclosurehistory = Array{Dict{String, Float64}, 1}(undef, numdata)
 
 
@@ -167,14 +201,14 @@ function BalanceBoundaryHistory(units)
         atomclosurehistory[datum] = atomclosures
     end
 
-    BalanceBoundaryHistory(units, numdata, inlets, outlets, total_in, total_out, closure, atomclosurehistory)
+    BalanceBoundaryHistory(unitlist, units, numdata, inletnames, outletnames, total_in, total_out, closure, atomclosurehistory)
 end
 
 
 # Pretty printing for BalanceBoundary objects
 function Base.show(io::IO, b::BalanceBoundary)
     println(io, "Balance Boundary:\n")
-    println(io, "Enclosed units: ", [u.name for u in b.units])
+    println(io, "Enclosed units: ", [u for u in b.units])
     println(io, "Closure: ", prettyround(b.closure))
     println(io)
     print(io, "Combined Feed ")
@@ -194,7 +228,7 @@ end
 # Pretty printing for BalanceBoundary objects
 function Base.show(io::IO, b::BalanceBoundaryHistory)
     println(io, "Balance Boundary:\n")
-    println(io, "Enclosed units: ", [u.name for u in b.units])
+    println(io, "Enclosed units: ", [u for u in b.units])
     println(io)
     println(io, "Data length:    ", b.numdata)
 end
