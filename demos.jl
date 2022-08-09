@@ -1,13 +1,9 @@
-include("MBbase.jl")
+using FlowsheetTools
 
 
+#-Components---------------------------
 
 
-
-
-
-
-#----Testing-----------------
 syscomps = ComponentList()
 
 @comp begin
@@ -25,15 +21,22 @@ end "Ethane" syscomps
 end "Ethylene" syscomps
 
 
+#-Streams------------------------------
+
 
 sysstreams = StreamList()
 
-@stream begin
-    "Ethylene" --> syscomps["Ethylene"].Mr*0.1
-    "Ethane" --> syscomps["Ethane"].Mr*0.9
-    "Hydrogen" --> syscomps["Hydrogen"].Mr*1.1
-end syscomps "Product" sysstreams
+@stream "mass" begin
+    "Ethylene" --> 0.1
+    "Ethane" --> 0.9
+    "Hydrogen" --> 1.1
+end syscomps "Test" sysstreams
 
+@stream "mole" begin 
+    "Ethylene" --> 0.1
+    "Ethane" --> 0.9
+    "Hydrogen" --> 1.1
+end syscomps "Product" sysstreams
 
 # Copy, rename and delete streams from the list
 copystream!(sysstreams, "Product", "mystream")
@@ -53,35 +56,32 @@ sysstreams["Prod2"] = 2.0*sysstreams["Product"]
 sysstreams["Prod2"].totalmassflow ≈ 2.0 * sysstreams["Product"].totalmassflow
 
 
-
-
-
-
+#-UnitOps, Boundaries and KPIs---------
 
 
 # Test unit ops and mass balance boundaries
 # Define some streams
 sysstreams = StreamList()
 
-@stream begin
-    "Ethylene" --> syscomps["Ethylene"].Mr*1.0
-    "Hydrogen" --> syscomps["Hydrogen"].Mr*2.0
+@stream "mole" begin
+    "Ethylene" --> 1.0
+    "Hydrogen" --> 2.0
 end syscomps "Feed" sysstreams
 
-@stream begin
-    "Ethylene" --> syscomps["Ethylene"].Mr*0.1
-    "Ethane" --> syscomps["Ethane"].Mr*0.9
-    "Hydrogen" --> syscomps["Hydrogen"].Mr*1.1
+@stream "mole" begin
+    "Ethylene" --> 0.1
+    "Ethane" --> 0.9
+    "Hydrogen" --> 1.1
 end syscomps "Product" sysstreams
 
 
-@stream begin
-    "Hydrogen" --> syscomps["Hydrogen"].Mr*1.1
+@stream "mole" begin
+    "Hydrogen" --> 1.1
 end syscomps "H2" sysstreams
 
-@stream begin
-    "Ethylene" --> syscomps["Ethylene"].Mr*0.1
-    "Ethane" --> syscomps["Ethane"].Mr*0.9
+@stream "mole" begin
+    "Ethylene" --> 0.1
+    "Ethane" --> 0.9
 end syscomps "C2" sysstreams
 
 
@@ -132,8 +132,8 @@ count = readcomponentlist!(syscomps2, "components", ["Ethylene", "Ethane", "Hydr
 count == 3
 
 
+#-Streams with historical data---------
 
-# ----------------------------------------------------------------
 
 histstreams = StreamHistoryList()
 # Read in some stream histories
@@ -143,9 +143,10 @@ histstreams["Product"] = readstreamhistory(joinpath("streamhistories", "ProdStre
 # And mix them
 histstreams["Comb"] = histstreams["Feed"] + histstreams["Product"]
 
-
 # And scale the result
 histstreams["Comb"] = 2.0 * histstreams["Comb"]
+
+#-UnitOps etc with historical data-----
 
 # Test UnitOpHistory
 histops = UnitOpHistoryList()

@@ -36,7 +36,7 @@ need to do that. I sincerely hope this proves to be useful, since it required a 
 including modifying the macros, months after I forgot how I wrote them in the first place :-(
 
 The streams hold an array of the names of the components actually present, so you don't
-need a bunch of zero flows for the components not present. The system component list is a Dict, 
+need a bunch of zero flows for the components not present. The system component list is a Dict,
 indexed on the component names, which is fairly flexible. I figured we don't need to squeeze
 every last nanosecond out of the speed in this specific area - that will more be the case in the
 "active" unit ops.

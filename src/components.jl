@@ -69,11 +69,18 @@ end
 #----Macros----------------------------
 
 
-# Parsing an expression to extract atoms and counts for use in macro @comp
-function parse_comp(ex, name, complist)
-    atoms = String[]
-    counts = Int[]
-    
+"""
+    @comp begin
+        C --> 2
+        H --> 6
+    end "Ethane" syscomps
+
+Defines a Component with the specified name and atomic composition and add it to syscomps::ComponenList
+"""
+macro comp(ex::Expr, name::String, complist::Symbol)      
+    local atoms = String[]
+    local counts = Int[]
+
     for line in ex.args
         match_atom = @capture(line, atom_sym_ --> count_)
         if match_atom
@@ -91,20 +98,7 @@ function parse_comp(ex, name, complist)
         end
     end
     
-    return :($complist[$name] = Component($name, $atoms, $counts))
-end
-
-
-"""
-    @comp begin
-        C --> 2
-        H --> 6
-    end "Ethane" syscomps
-
-Defines a Component with the specified name and atomic composition and add it to syscomps::ComponenList
-"""
-macro comp(ex::Expr, name::String, complist::Symbol)      
-    return parse_comp(ex, name, complist)
+    return :($(esc(complist))[$name] = Component($name, $atoms, $counts))
 end
 
 

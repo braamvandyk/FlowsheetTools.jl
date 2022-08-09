@@ -55,12 +55,14 @@ end
 Constructor for a stream that defines the stream name and component flows.
 The mass flows are specified and a molar composition and atomic molar flows calculated.
 """
-function Stream(name, complist, comps, massflows)
+function Stream(name, complist, comps, flows, ismoleflow=false)
     numcomps = length(comps)
     
-    length(massflows) != numcomps && error("mismatch between number of components and available data.")
+    length(flows) != numcomps && error("mismatch between number of components and available data.")
 
+    massflows = zeros(numcomps)
     moleflows = zeros(numcomps)
+
     atomflows = Dict{String, Float64}()
     totalmassflow = 0.0
     
@@ -68,9 +70,16 @@ function Stream(name, complist, comps, massflows)
     for (i, compname) in enumerate(comps)
         comp = complist[compname]
 
+        if !ismoleflow
+            massflows[i] = flows[i]
+            moleflows[i] = massflows[i]/comp.Mr
+        else
+            moleflows[i] = flows[i]
+            massflows[i] = moleflows[i]*comp.Mr
+        end
+            
         totalmassflow += massflows[i]
-        moleflows[i] = massflows[i]/comp.Mr
-        
+            
         for (j, atom) in enumerate(comp.atoms)
             if atom in keys(atomflows)
                 atomflows[atom] += moleflows[i]*comp.counts[j]
@@ -78,6 +87,7 @@ function Stream(name, complist, comps, massflows)
                 atomflows[atom] = moleflows[i]*comp.counts[j]
             end
         end
+
     end
 
     return Stream(name, complist, comps, massflows, moleflows, totalmassflow, atomflows)
@@ -392,8 +402,33 @@ The flows may be expressions, which is useful to specify molar flows.
     end syscomps "Feed" systreams
 
 """
-macro stream(ex::Expr, complist::Symbol, name::String, streamlist::Symbol)      
-    return parse_stream(ex, complist, name, streamlist)
+macro stream(flowtype::String, ex::Expr, complist::Symbol, name::String, streamlist::Symbol)      
+    local comps = String[]
+    local flows = Float64[]
+
+    if lowercase(flowtype) == "mass"
+        local ismoleflow = false
+    elseif lowercase(flowtype) == "mole"
+        local ismoleflow = true
+    else
+        error("unknown flow specification")
+    end
+
+    for line in ex.args
+        match_comp = @capture(line, comp_ --> flow_)
+        if match_comp
+            local component = eval(comp)
+            local flowval = eval(flow)
+            if any(x -> x == component, comps)
+                i = findfirst(x -> x == component, comps)
+                flows[i] += flowval
+            else
+                push!(comps, component)
+                push!(flows, flowval)
+            end
+        end
+    end
+    return :($(esc(streamlist))[$name] = Stream($name, $(esc(complist)), $comps, $flows, $ismoleflow))
 end
 
 
