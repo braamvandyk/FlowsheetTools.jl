@@ -1,15 +1,15 @@
 #----Closure-----------------
 
 """
-    function closemb(boundary::BalanceBoundary; totalweight=1.0, elementweight=1.0)
-    function closemb(boundary::BalanceBoundaryHistory; totalweight=1.0, elementweight=1.0)
+    function calccorrections(boundary::BalanceBoundary; totalweight=1.0, elementweight=1.0)
+    function calccorrections(boundary::BalanceBoundaryHistory; totalweight=1.0, elementweight=1.0)
 
 Basic mass balance reconciliation. Error in total mass closure and average element closures are
 weighted by *totalweight* and *elementweight* respectively and the squared weighted error is minimized.
 
 Results are returned as a dict of streams and corrections to their flows.
 """
-function closemb(boundary::BalanceBoundary; totalweight=1.0, elementweight=1.0)         
+function calccorrections(boundary::BalanceBoundary; totalweight=1.0, elementweight=1.0)         
     # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
     streamlist = first(boundary.unitlist.list).second.streamlist
@@ -71,7 +71,38 @@ function closemb(boundary::BalanceBoundary; totalweight=1.0, elementweight=1.0)
 end
 
 
-function closemb(boundary::BalanceBoundaryHistory; totalweight=1.0, elementweight=1.0)         
+"""
+
+    function closemb(boundary::BalanceBoundary, [corrections::Dict{String, Float64}])
+    function closemb(boundary::BalanceBoundaryHistory, [corrections = Dict{String, Float64}])
+
+Apply the mass balance reconciliation. The corrections can first calculated using `calccorrections`
+and can then be applied to multiple boundaries using this function. If no corrections are passed,
+`calccorrections` is automatically called.
+
+Since balance boundaries are immutable, a new boundary instance is returned.
+"""
+function closemb(boundary::BalanceBoundary, corrections=nothing; totalweight=1.0, elementweight=1.0)
+    isnothing(corrections) && (corrections = calccorrections(boundary; totalweight, elementweight))
+
+    # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
+    # all of the unit ops must have the same stream list
+    streamlist = first(boundary.unitlist.list).second.streamlist  
+
+    # Apply the stream corrections
+    for stream in keys(corrections)
+        streamlist[stream] *= corrections[stream]
+    end
+
+    #Recreate the boundary
+    newboundary = BalanceBoundary(boundary.unitlist, boundary.units)
+
+    return newboundary
+end
+
+
+
+function calccorrections(boundary::BalanceBoundaryHistory; totalweight=1.0, elementweight=1.0)         
     # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
     streamlist = first(boundary.unitlist.list).second.streamlist  
@@ -124,4 +155,23 @@ function closemb(boundary::BalanceBoundaryHistory; totalweight=1.0, elementweigh
     end
 
     return corrections
+end
+
+
+function closemb(boundary::BalanceBoundaryHistory, corrections=nothing; totalweight=1.0, elementweight=1.0)
+    isnothing(corrections) && (corrections = calccorrections(boundary; totalweight, elementweight))
+
+    # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
+    # all of the unit ops must have the same stream list
+    streamlist = first(boundary.unitlist.list).second.streamlist  
+
+    # Apply the stream corrections
+    for stream in keys(corrections)
+        streamlist[stream] *= corrections[stream]
+    end
+
+    #Recreate the boundary
+    newboundary = BalanceBoundaryHistory(boundary.unitlist, boundary.units)
+
+    return newboundary
 end

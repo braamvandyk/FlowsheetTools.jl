@@ -1,4 +1,4 @@
-#----BalanceBoundary---------
+#----Definitions-----------------------
 
 struct BalanceBoundary
     # Units included in the boundary
@@ -51,6 +51,9 @@ struct BalanceBoundaryHistory
         new(unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
     end
 end
+
+
+#----Constructors----------------------
 
 
 function BalanceBoundary(unitlist, units)
@@ -203,6 +206,9 @@ function BalanceBoundaryHistory(unitlist::UnitOpHistoryList, units::Vector{Strin
 
     BalanceBoundaryHistory(unitlist, units, numdata, inletnames, outletnames, total_in, total_out, closure, atomclosurehistory)
 end
+
+
+#----Base overloads--------------------
 
 
 # Pretty printing for BalanceBoundary objects

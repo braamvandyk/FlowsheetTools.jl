@@ -27,7 +27,7 @@ function Component(name, atoms, counts)
     for (i, atom) in enumerate(atoms)
         Mr += counts[i]*Atoms.atomweights[atom]
     end
-    Component(name, atoms, counts, Mr)
+    return Component(name, atoms, counts, Mr)
 end
 
 
@@ -41,7 +41,9 @@ end
 
 
 function Base.setindex!(A::ComponentList, X::Component, idx::String)
-        A.list[idx] = X
+    A.list[idx] = X
+
+    return nothing
 end
 
 function Base.getindex(A::ComponentList, idx::String)
@@ -88,6 +90,7 @@ function parse_comp(ex, name, complist)
             end
         end
     end
+    
     return :($complist[$name] = Component($name, $atoms, $counts))
 end
 

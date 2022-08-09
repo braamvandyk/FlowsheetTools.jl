@@ -116,7 +116,9 @@ sysunitops["Membrane2"] = UnitOp("MX101", sysstreams, ["Prod2"], ["C2", "H2"])
 b2 = BalanceBoundary(sysunitops, ["Reactor2", "Membrane2"])
 
 # Get the correction factors on the inlets and outlets
-corrections = closemb(b2)
+corrections = calccorrections(b2)
+b2 = closemb(b2)
+b2
 
 # Test the pretty printing
 print(syscomps["Ethane"])
@@ -151,4 +153,6 @@ histops["RX101"] = UnitOpHistory("RX101", histstreams, ["Feed"], ["Product"])
 
 # Test BalanceBoundaryHistory
 bh = BalanceBoundaryHistory(histops, ["RX101"])
-corrections = closemb(bh)
+corrections = calccorrections(bh)
+bh = closemb(bh)
+bh

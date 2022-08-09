@@ -80,7 +80,7 @@ function Stream(name, complist, comps, massflows)
         end
     end
 
-    Stream(name, complist, comps, massflows, moleflows, totalmassflow, atomflows)
+    return Stream(name, complist, comps, massflows, moleflows, totalmassflow, atomflows)
 end
 
 
@@ -123,7 +123,8 @@ function StreamHistory(name, complist, comps, timestamps, massflowshistory)
         atomflowshistory[datum] = atomflows
     end
 
-    StreamHistory(name, numdata, complist, comps, timestamps, massflowshistory, moleflowshistory, totalmassflowhistory, atomflowshistory)
+    return StreamHistory(name, numdata, complist, comps, timestamps, massflowshistory, moleflowshistory,
+                         totalmassflowhistory, atomflowshistory)
 end
 
 
@@ -167,7 +168,7 @@ function Base.:+(a::Stream, b::Stream)
         end
     end
 
-    Stream(a.name * "-" * b.name, a.complist, comps, massflows)
+    return Stream(a.name * "-" * b.name, a.complist, comps, massflows)
 end
 
 
@@ -206,7 +207,7 @@ function Base.:+(a::StreamHistory, b::StreamHistory)
         end
     end
 
-    StreamHistory(a.name * "-" * b.name, a.complist, comps, a.timestamps, massflows)
+    return StreamHistory(a.name * "-" * b.name, a.complist, comps, a.timestamps, massflows)
 end
 
 
@@ -217,9 +218,12 @@ Extend the multiplication operator to scale a stream's flows by a scalar value.
 Used in mass balance reconciliations to apply flow corrections.
 """
 function Base.:*(a::T, b::Stream) where T <: Real
-    Stream(b.name, b.complist, b.comps, a .* b.massflows)
+    return Stream(b.name, b.complist, b.comps, a .* b.massflows)
 end
 
+function Base.:*(b::Stream, a::T) where T <: Real
+    return Stream(b.name, b.complist, b.comps, a .* b.massflows)
+end
 
 """
     Base.*(a::T, b::StreamHistory) where T <: Real
@@ -228,7 +232,11 @@ Extend the multiplication operator to scale a stream history's flows by a scalar
 Used in mass balance reconciliations to apply flow corrections.
 """
 function Base.:*(a::T, b::StreamHistory) where T <: Real
-    StreamHistory(b.name, b.complist, b.comps, b.timestamps, a .* b.massflows)
+    return StreamHistory(b.name, b.complist, b.comps, b.timestamps, a .* b.massflows)
+end
+
+function Base.:*(b::StreamHistory, a::T) where T <: Real
+    return StreamHistory(b.name, b.complist, b.comps, b.timestamps, a .* b.massflows)
 end
 
 
@@ -245,6 +253,8 @@ function Base.setindex!(A::StreamList, X::Stream, idx::String)
 
         A.list[idx] = X
     end
+
+    return nothing
 end
 
 function Base.getindex(A::StreamList, idx::String)
@@ -398,6 +408,8 @@ Copy a stream in the stream list
 function copystream!(list::StreamList, from::String, to::String; factor=1.0)
     str = factor*list[from]
     list[to] = Stream(to, str.complist, str.comps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)
+
+    return nothing
 end
 
 
@@ -408,6 +420,8 @@ Delete a stream from the stream list
 """
 function deletestream!(list::StreamList, from::String)
     delete!(list.list, from)
+
+    return nothing
 end
 
 
@@ -420,6 +434,8 @@ function renamestream!(list::StreamList, from::String, to::String)
     str = list[from]
     list[to] = Stream(to, str.complist, str.comps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)
     delete!(list.list, from)
+
+    return nothing
 end
 
 
@@ -432,6 +448,8 @@ function copystreamhistory!(list::StreamHistory, from::String, to::String; facto
     str = factor*list[from]
     list[to] = StreamHistory(to, str.numdata, str.complist, str.comps, str.timestamps, str.massflowshistory, 
                              str.moleflowshistory, str.totalmassflowhistory, str.atomflowshistory)
+
+    return nothing
 end
 
 
@@ -442,6 +460,8 @@ Delete a StreamHistory from the StreamHistoryList
 """
 function deletestreamhistory!(list::StreamHistoryList, from::String)
     delete!(list.list, from)
+
+    return nothing
 end
 
 
@@ -455,6 +475,8 @@ function renamestreamhistory!(list::StreamHistoryList, from::String, to::String)
     list[to] = StreamHistory(to, str.numdata, str.complist, str.comps, str.timestamps, str.massflowshistory, 
                              str.moleflowshistory, str.totalmassflowhistory, str.atomflowshistory)
     delete!(list.list, from)
+
+    return nothing
 end
 
 
