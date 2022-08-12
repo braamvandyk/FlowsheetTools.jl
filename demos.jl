@@ -27,9 +27,9 @@ end "Ethylene" syscomps
 sysstreams = StreamList()
 
 @stream "mass" begin
-    "Ethylene" --> 0.1
-    "Ethane" --> 0.9
-    "Hydrogen" --> 1.1
+    "Ethylene" --> 2.8053
+    "Ethane" --> 27.06192
+    "Hydrogen" --> 2.21738
 end syscomps "Test" sysstreams
 
 @stream "mole" begin 
@@ -38,9 +38,15 @@ end syscomps "Test" sysstreams
     "Hydrogen" --> 1.1
 end syscomps "Product" sysstreams
 
-# Copy, rename and delete streams from the list
+sysstreams["Test"].moleflows ≈ sysstreams["Product"].moleflows
+
+# Manipulate some streams
+
+# Copy and copy with multiply
 copystream!(sysstreams, "Product", "mystream")
-copystream!(sysstreams, "Product", "mystream2"; factor=2.0)
+copystream!(sysstreams, "Product", "mystream2"; factor=2.0) # double the flow!
+
+sysstreams["mystream2"].totalmassflow ≈ 2.0 * sysstreams["mystream"].totalmassflow
 
 # Different name, so not identical
 sysstreams["Product"] == sysstreams["mystream"]
@@ -48,6 +54,7 @@ sysstreams["Product"] == sysstreams["mystream"]
 # But all the flows are the same
 sysstreams["Product"].atomflows == sysstreams["mystream"].atomflows
 
+# Do some more things with streams
 renamestream!(sysstreams, "mystream", "dummy")
 deletestream!(sysstreams, "dummy")
 
