@@ -529,18 +529,14 @@ name of the component.
 
 """
 function readstreamhistory(filename, streamname, complist)
-    df = CSV.read(filename, DataFrame, dateformat="yyyy/mm/dd HH:MM")
-    comps = names(df)[2:end]
 
-    massflows = zeros(size(df, 1), length(comps))
+    data, header = readdlm(filename, ',', '\n', header=true)
+    comps = string.(header[2:end]) # readdlm returns an array of AbstractStrings for some reason
+    massflows = data[:, 2:end]
+    timestamps = DateTime.(data[:, 1], "yyyy/mm/dd HH:MM")
 
-    for (i, compname) in enumerate(comps)
-        massflows[:, i] = df[:, compname]
-    end
-
-    return StreamHistory(streamname, complist, comps, df.TimeStamp, transpose(massflows))
+    return StreamHistory(streamname, complist, comps, timestamps, transpose(massflows))
 end
-
 
 
 

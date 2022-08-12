@@ -8,5 +8,4 @@
 6. Create Plots/Makie recipes for plotting stuff
 7. Add KPIs for histories
 8. Check for missing pretty printing (like on lists...)
-9. NB! NB! NB! Drop CSV and DataFrames as dependencies NB! NB! NB!
-10. Print stream tables for a boundary (PrettyTables?)
+9. Print stream tables for a boundary (PrettyTables?)

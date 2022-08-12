@@ -9,7 +9,7 @@ export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomp
         conversion, selectivity
 
 
-using CSV, DataFrames, JSON3, MacroTools, Optim, StructTypes, Statistics, Dates
+using JSON3, MacroTools, Optim, StructTypes, Statistics, Dates, DelimitedFiles
 import Base.setindex!
 import Base.getindex
 import Base.length
