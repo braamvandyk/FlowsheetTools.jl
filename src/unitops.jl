@@ -1,6 +1,8 @@
 #----Definitions-----------------------
 
-struct UnitOp
+abstract type Unit end
+
+struct UnitOp <: Unit
     name::String
 
     streamlist::StreamList
@@ -8,6 +10,17 @@ struct UnitOp
     # Connected streams
     inlets::Array{String, 1}
     outlets::Array{String, 1}
+
+    f!::Function
+    params
+end
+
+function (u::UnitOp)(newparams = nothing)
+    if isnothing(newparams)
+        u.f!(u.streamlist, u.outlets, u.inlets, u.params)
+    else
+        u.f!(u.streamlist, u.outlets, u.inlets, newparams)
+    end
 end
 
 
@@ -62,6 +75,16 @@ end
 #----Constructors----------------------
 
 
+function UnitOp(name::String, streamlist::StreamList, inlets::Vector{String}, outlets::Vector{String})
+    return UnitOp(name, streamlist, inlets, outlets, passive, nothing)
+end
+
+
+function UnitOp(name::String, streamlist::StreamList, inlets::Vector{String}, outlets::Vector{String}, f!::Function)
+    return UnitOp(name, streamlist, inlets, outlets, f!, nothing)
+end
+
+
 """
     UnitOpHistory(name, streamlist, inlets, outlets)
 
@@ -84,6 +107,31 @@ end
 function UnitOpHistoryList()
     l = Dict{String, UnitOpHistory}()
     return UnitOpHistoryList(l)
+end
+
+
+#----Active UnitOps--------------------
+
+
+function passive(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
+    return nothing
+end
+
+
+function mixer!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
+    @assert length(outlets) == 1 "mixers can have only one outlet stream"
+
+    old = streamlist[outlets[1]]
+    oldname = old.name
+    
+    tempstream = Stream(old.name, old.complist, String[], Float64[])
+    for inlet in inlets[1:end]
+        tempstream += streamlist[inlet]
+    end
+
+    streamlist[oldname] = tempstream
+
+    return nothing
 end
 
 

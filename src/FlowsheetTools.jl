@@ -6,13 +6,15 @@ export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomp
         UnitOp, UnitOpHistory, UnitOpList, UnitOpHistoryList,
         BalanceBoundary, BalanceBoundaryHistory,
         calccorrections, closemb,
-        conversion, selectivity
+        conversion, selectivity,
+        mixer!
 
 
 using JSON3, MacroTools, Optim, StructTypes, Statistics, Dates, DelimitedFiles
 import Base.setindex!
 import Base.getindex
 import Base.length
+import Base.copy
 
 
 

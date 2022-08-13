@@ -95,7 +95,7 @@ end
 
 
 """
-    StreamHistory(streamname, complist, comps, timestamps, massflowshistory)
+    StreamHistory(name, complist, comps, timestamps, massflowshistory)
 
 Constructor for a stream history object that defines the stream name and component flows
 for various past measurements.
@@ -178,7 +178,7 @@ function Base.:+(a::Stream, b::Stream)
         end
     end
 
-    return Stream(a.name * "-" * b.name, a.complist, comps, massflows)
+    return Stream(a.name * "+" * b.name, a.complist, comps, massflows)
 end
 
 
@@ -217,7 +217,7 @@ function Base.:+(a::StreamHistory, b::StreamHistory)
         end
     end
 
-    return StreamHistory(a.name * "-" * b.name, a.complist, comps, a.timestamps, massflows)
+    return StreamHistory(a.name * "+" * b.name, a.complist, comps, a.timestamps, massflows)
 end
 
 
@@ -299,9 +299,11 @@ function Base.setindex!(A::StreamHistoryList, X::StreamHistory, idx::String)
     end
 end
 
+
 function Base.getindex(A::StreamHistoryList, idx::String)
     return A.list[idx]
 end
+
 
 function Base.getindex(A::StreamHistoryList, idxs::Vector{String})
     res = StreamHistory[]
@@ -311,8 +313,14 @@ function Base.getindex(A::StreamHistoryList, idxs::Vector{String})
     return res
 end
 
+
 function Base.length(A::StreamHistoryList)
     return length(A.list)
+end
+
+
+function  Base.copy(A::Stream)
+    return Stream(A.name, A.complist, A.comps, A.massflows, A.moleflows, A.totalmassflow, A.atomflows)
 end
 
 
@@ -358,48 +366,25 @@ end
 #----Macros----------------------------
 
 
-# Parsing an expression to extract components and massflows for use in macro @stream
-function parse_stream(ex, complist, name, streamlist)
-    comps = String[]
-    massflows = Float64[]
-    
-    for line in ex.args
-        match_comp = @capture(line, comp_ --> flow_)
-        if match_comp
-            comp = eval(comp)
-            massflow = eval(flow)
-            if any(x -> x == comp, comps)
-                i = findfirst(x -> x == comp, comps)
-                massflows[i] += massflow
-            else
-                push!(comps, comp)
-                push!(massflows, massflow)
-            end
-        end
-    end
-    return :($streamlist[$name] = Stream($name, $complist, $comps, $massflows))
-end
-
-
 """
 Defines a Stream() with the specified name and component mass flows and
-add it to sysstreams::StreamList.
+add it to `sysstreams::StreamList`.
 
 The names of components must match those in the specified componentlist
-(syscomps::ComponentList in the example). 
+(`syscomps::ComponentList` in the example). 
 
 
-    @stream begin
-        "Ethylene" --> 2.0
-        "Hydrogen" --> 6.2
-    end syscomps "Feed" systreams
-    
-The flows may be expressions, which is useful to specify molar flows.
-    
-    @stream begin
-        "Ethylene" --> syscomps["Ethylene"].Mr
-        "Hydrogen" --> 2.0*syscomps["Hydrogen"].Mr
-    end syscomps "Feed" systreams
+    @stream "mass" begin
+        "Ethylene" --> 2.8053
+        "Ethane" --> 27.06192
+        "Hydrogen" --> 2.21738
+    end syscomps "Test" sysstreams
+
+    @stream "mole" begin 
+        "Ethylene" --> 0.1
+        "Ethane" --> 0.9
+        "Hydrogen" --> 1.1
+    end syscomps "Product" sysstreams 
 
 """
 macro stream(flowtype::String, ex::Expr, complist::Symbol, name::String, streamlist::Symbol)      
@@ -411,7 +396,7 @@ macro stream(flowtype::String, ex::Expr, complist::Symbol, name::String, streaml
     elseif lowercase(flowtype) == "mole"
         local ismoleflow = true
     else
-        error("unknown flow specification")
+        error("flow basis specification must be mass or mole")
     end
 
     for line in ex.args
@@ -471,6 +456,11 @@ function renamestream!(list::StreamList, from::String, to::String)
     delete!(list.list, from)
 
     return nothing
+end
+
+
+function renamestream(str::Stream, newname::String)
+    return Stream(newname, str.complist, str.comps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)  
 end
 
 

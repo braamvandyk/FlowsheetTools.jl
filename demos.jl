@@ -91,12 +91,17 @@ end syscomps "H2" sysstreams
     "Ethane" --> 0.9
 end syscomps "C2" sysstreams
 
+@stream "mole" begin
+    "Hydrogen" --> 0.0
+end syscomps "Mixed" sysstreams
 
 # Define some unit ops
 sysunitops = UnitOpList()
 
 sysunitops["Reactor"] = UnitOp("RX101", sysstreams, ["Feed"], ["Product"])
 sysunitops["Membrane"]  = UnitOp("MX101", sysstreams, ["Product"], ["C2", "H2"])
+sysunitops["Mixer"] = UnitOp("MX101", sysstreams, ["C2", "H2"], ["Mixed"], mixer!)
+sysunitops["Mixer"]()
 
 # Define a mass balance boundary
 b = BalanceBoundary(sysunitops, ["Reactor", "Membrane"])
