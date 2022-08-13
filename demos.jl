@@ -98,9 +98,21 @@ end syscomps "Mixed" sysstreams
 # Define some unit ops
 sysunitops = UnitOpList()
 
-sysunitops["Reactor"] = UnitOp("RX101", sysstreams, ["Feed"], ["Product"])
-sysunitops["Membrane"]  = UnitOp("MX101", sysstreams, ["Product"], ["C2", "H2"])
-sysunitops["Mixer"] = UnitOp("MX101", sysstreams, ["C2", "H2"], ["Mixed"], mixer!)
+@unitop begin
+    inlets --> ["Feed"]
+    outlets --> ["Product"]
+end "Reactor" sysstreams sysunitops
+
+@unitop begin
+    inlets --> ["Product"]
+    outlets --> ["C2", "H2"]
+end "Membrane" sysstreams sysunitops
+
+@unitop begin
+    inlets --> ["H2", "C2"]
+    outlets --> ["Mixed"]
+    calc --> mixer!
+end "Mixer" sysstreams sysunitops
 sysunitops["Mixer"]()
 
 # Define a mass balance boundary
@@ -123,8 +135,16 @@ copystream!(sysstreams, "Feed", "Feed2"; factor=0.95)
 copystream!(sysstreams, "Product", "Prod2"; factor=1.01)
 
 # Define the unit ops and boundary
-sysunitops["Reactor2"] = UnitOp("RX101", sysstreams, ["Feed2"], ["Prod2"])
-sysunitops["Membrane2"] = UnitOp("MX101", sysstreams, ["Prod2"], ["C2", "H2"])
+@unitop begin
+    inlets --> ["Feed2"]
+    outlets --> ["Prod2"]
+end "Reactor2" sysstreams sysunitops
+
+@unitop begin
+    inlets --> ["Prod2"]
+    outlets --> ["C2", "H2"]
+end "Membrane2" sysstreams sysunitops
+
 b2 = BalanceBoundary(sysunitops, ["Reactor2", "Membrane2"])
 
 # Get the correction factors on the inlets and outlets

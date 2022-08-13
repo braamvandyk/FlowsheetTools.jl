@@ -154,7 +154,7 @@ end
 
 
 """
-    Base.+(a::Stream, b::Stream)
+    Base.:+(a::Stream, b::Stream)
 
 Extend the addition operator to add to streams to each other - a mixer.
 It is assumed that the streams will have different components in arbitrary order.

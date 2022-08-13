@@ -122,15 +122,15 @@ function mixer!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{
     @assert length(outlets) == 1 "mixers can have only one outlet stream"
 
     old = streamlist[outlets[1]]
-    oldname = old.name
-    
+        
     tempstream = Stream(old.name, old.complist, String[], Float64[])
     for inlet in inlets[1:end]
         tempstream += streamlist[inlet]
     end
 
-    streamlist[oldname] = tempstream
-
+    tempstream = renamestream(tempstream, old.name)
+    streamlist[old.name] = tempstream
+    
     return nothing
 end
 
@@ -197,4 +197,73 @@ function Base.show(io::IO, u::UnitOpHistory)
     println(io, "Product streams: ", [s for s in u.outlets])
     println(io)
     println(io, "Data length:     $(u.numdata)")
+end
+
+
+#----Macros----------------------------
+
+
+"""
+Defines a `UnitOp with` the specified name and connected streams.
+
+@unitop begin
+    inlets --> ["H2", "C2"]
+    outlets --> ["Mixed"]
+    calc --> mixer!
+end "Mixer" sysstreams sysunitops
+
+This will create a UnitOp named "Mixer", saved into sysunitops["Mixer"].
+The specified streams refer to entries in sysstreams::StreamList.
+
+Two optional parameters may be specified, i.e. calc and params:
+
+calc is a function, e.g. 
+    function mixer!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
+params is an iterable passed to the function.
+
+Together, these specify a calculation to perform to calculate the outlet(s) from the inlet(s), when
+calling `sysunitops["Mixer"]()`
+
+Alternative parameters may also be specified in the call, e.g.
+    sysunitops["Mixer"]([1, 2, 3])
+
+"""
+macro unitop(ex::Expr, name::String, streamlist::Symbol, unitoplist::Symbol)      
+    local inlets = String[]
+    local outlets = String[]
+    local func = nothing
+    local params = nothing
+    
+    for line in ex.args
+        match_comp = @capture(line, inlets --> [ins__])
+        if match_comp
+            for strm in ins
+                push!(inlets, strm)
+            end
+        end
+        
+        match_comp = @capture(line, outlets --> [outs__])
+        if match_comp
+            for strm in outs
+                push!(outlets, strm)
+            end
+        end
+
+        match_comp = @capture(line, calc --> unitopfunc_)
+        if match_comp
+            func = unitopfunc
+        end
+
+        match_comp = @capture(line, params --> unitopparams_)
+        if match_comp
+            params = unitopparams
+        end
+
+    end
+
+    if isnothing(func)
+        return :($(esc(unitoplist))[$name] = UnitOp($name, $(esc(streamlist)), $inlets, $outlets))
+    else    
+        return :($(esc(unitoplist))[$name] = UnitOp($name, $(esc(streamlist)), $inlets, $outlets, $(esc(func)), $(esc(params))))
+    end
 end
