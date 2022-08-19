@@ -169,8 +169,8 @@ count == 3
 
 histstreams = StreamHistoryList()
 # Read in some stream histories
-histstreams["Feed"] = readstreamhistory(joinpath("streamhistories", "FeedStream.csv"), "Feed", syscomps)
-histstreams["Product"] = readstreamhistory(joinpath("streamhistories", "ProdStream.csv"), "Product", syscomps)
+histstreams["Feed"] = readstreamhistory(joinpath("streamhistories", "FeedStream.csv"), "Feed", syscomps; ismoleflow=true)
+histstreams["Product"] = readstreamhistory(joinpath("streamhistories", "ProdStream.csv"), "Product", syscomps; ismoleflow=true)
 
 # And mix them
 histstreams["Comb"] = histstreams["Feed"] + histstreams["Product"]
@@ -184,8 +184,15 @@ histstreams["Comb"] = 2.0 * histstreams["Comb"]
 histops = UnitOpHistoryList()
 histops["RX101"] = UnitOpHistory("RX101", histstreams, ["Feed"], ["Product"])
 
+
+
 # Test BalanceBoundaryHistory
 bh = BalanceBoundaryHistory(histops, ["RX101"])
+
+conversion(bh, "Ethylene")
+conversion(bh, "Water")
+
 corrections = calccorrections(bh)
 bh = closemb(bh)
-bh
+conversion(bh, "Ethylene")
+selectivity(bh, "Ethylene", "Ethane")

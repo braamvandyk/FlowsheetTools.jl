@@ -1,4 +1,9 @@
-#----Definitions-----------------------
+#----------------------------------------------------------------------------
+#
+#----Definitions-------------------------------------------------------------
+#
+#----------------------------------------------------------------------------
+
 
 struct Stream
     name::String
@@ -47,10 +52,15 @@ struct StreamHistoryList
 end
 
 
-#----Constructors----------------------
+#----------------------------------------------------------------------------
+#
+#----Constructors------------------------------------------------------------
+#
+#----------------------------------------------------------------------------
+
 
 """
-    Stream(name, complist, comps, massflows)
+    function Stream(name, complist, comps, flows, ismoleflow=false)
 
 Constructor for a stream that defines the stream name and component flows.
 The mass flows are specified and a molar composition and atomic molar flows calculated.
@@ -95,21 +105,23 @@ end
 
 
 """
-    StreamHistory(name, complist, comps, timestamps, massflowshistory)
+    function StreamHistory(name, complist, comps, timestamps, flowshistory, ismoleflow=false)
 
 Constructor for a stream history object that defines the stream name and component flows
 for various past measurements.
 The mass flows are specified and a molar composition and atomic molar flows calculated.
 The mass flow history is passed as a matrix where each column is a datum
 """
-function StreamHistory(name, complist, comps, timestamps, massflowshistory)
+function StreamHistory(name, complist, comps, timestamps, flowshistory, ismoleflow=false)
     numcomps = length(comps)
-    numdata = size(massflowshistory, 2)
+    numdata = size(flowshistory, 2)
 
-    size(massflowshistory, 1) != numcomps && error("mismatch between number of components and available data.")
+    size(flowshistory, 1) != numcomps && error("mismatch between number of components and available data.")
     length(timestamps) != numdata && error("length mismatch between data and timestamps.")
 
+    massflowshistory = zeros(numcomps, numdata)
     moleflowshistory = zeros(numcomps, numdata)
+
     atomflowshistory = Array{Dict{String, Float64}, 1}(undef, numdata)
     totalmassflowhistory = zeros(numdata)
     
@@ -119,8 +131,15 @@ function StreamHistory(name, complist, comps, timestamps, massflowshistory)
         for (i, compname) in enumerate(comps)
             comp = complist[compname]
 
+            if !ismoleflow
+                massflowshistory[i, datum] = flowshistory[i, datum]
+                moleflowshistory[i, datum] = flowshistory[i, datum]/comp.Mr
+            else
+                moleflowshistory[i, datum] = flowshistory[i, datum]
+                massflowshistory[i, datum] = flowshistory[i, datum]*comp.Mr
+            end
+
             totalmassflowhistory[datum] += massflowshistory[i, datum]
-            moleflowshistory[i, datum] = massflowshistory[i, datum]/comp.Mr
             
             for (j, atom) in enumerate(comp.atoms)
                 if atom in keys(atomflows)
@@ -149,8 +168,11 @@ function StreamHistoryList()
     return StreamHistoryList(l)
 end
 
-
-#----Base overloads--------------------
+#----------------------------------------------------------------------------
+# 
+#----Base overloads----------------------------------------------------------
+# 
+#----------------------------------------------------------------------------
 
 
 """
@@ -360,10 +382,16 @@ function Base.show(io::IO, s::StreamHistory)
 
     println(io)
     println(io, "Data length: $(length(s.totalmassflow))")
+    println(io, "Data starts:\t$(s.timestamps[begin])")
+    println(io, "Data ends:\t$(s.timestamps[end])")
 end
 
 
-#----Macros----------------------------
+# ----------------------------------------------------------------------------
+# 
+#----Macros-------------------------------------------------------------------
+# 
+# ----------------------------------------------------------------------------
 
 
 """
@@ -417,7 +445,11 @@ macro stream(flowtype::String, ex::Expr, complist::Symbol, name::String, streaml
 end
 
 
-#----Utilities-------------------------
+#----------------------------------------------------------------------------
+# 
+#----Utilities---------------------------------------------------------------
+# 
+#----------------------------------------------------------------------------
 
 
 """
@@ -518,14 +550,14 @@ name of the component.
 **The names should match those in the system component list that is passed to the function.**
 
 """
-function readstreamhistory(filename, streamname, complist)
+function readstreamhistory(filename, streamname, complist; ismoleflow=false)
 
     data, header = readdlm(filename, ',', '\n', header=true)
     comps = string.(header[2:end]) # readdlm returns an array of AbstractStrings for some reason
-    massflows = data[:, 2:end]
+    flows = data[:, 2:end]
     timestamps = DateTime.(data[:, 1], "yyyy/mm/dd HH:MM")
 
-    return StreamHistory(streamname, complist, comps, timestamps, transpose(massflows))
+    return StreamHistory(streamname, complist, comps, timestamps, transpose(flows), ismoleflow)
 end
 
 
