@@ -199,7 +199,7 @@ end
 
 # Pretty printing for UnitOp objects
 function Base.show(io::IO, u::UnitOp)
-    println(io, "Unit Operation: $(u.name)\n")
+    println(io, "Unit Operation:  $(u.name)")
     println(io, "Feed streams:    ", [s for s in u.inlets])
     println(io)
     println(io, "Product streams: ", [s for s in u.outlets])
@@ -208,12 +208,42 @@ end
 
 # Pretty printing for UnitOp objects
 function Base.show(io::IO, u::UnitOpHistory)
-    println(io, "Unit Operation:  $(u.name)\n")
+    println(io, "Unit Operation:  $(u.name)")
     println(io, "Feed streams:    ", [s for s in u.inlets])
     println(io)
     println(io, "Product streams: ", [s for s in u.outlets])
     println(io)
-    println(io, "Data length:     $(u.numdata)")
+    println(io, "Data length:\t$(u.numdata)")
+    strm = first(u.streamlist.list)
+    println(io, "Data starts:\t$(strm.second.timestamps[begin])")
+    println(io, "Data ends:\t$(strm.second.timestamps[end])") 
+end
+
+
+function  Base.show(io::IO, uol::UnitOpList)
+    println(io, "UnitOp list:")
+    for unitop in uol.list
+        println(io, "  ", unitop.first)
+    end
+end
+
+
+function  Base.show(io::IO, uol::UnitOpHistoryList)
+    println(io, "UnitOpHistory list:")
+    if length(uol.list) > 0
+        for unitop in uol.list
+            println(io, "  ", unitop.first)
+        end
+        println(io)
+        sl = first(uol.list).second.streamlist
+        inlets = first(uol.list).second.inlets
+        strm = sl[inlets[1]]
+        println(io, "Data length:\t$(strm.numdata)")
+        println(io, "Data starts:\t$(strm.timestamps[begin])")
+        println(io, "Data ends:\t$(strm.timestamps[end])")         
+    else
+        println(io, "Empty list")
+    end
 end
 
 
@@ -286,5 +316,46 @@ macro unitop(ex::Expr, name::String, streamlist::Symbol, unitoplist::Symbol)
         return :($(esc(unitoplist))[$name] = UnitOp($name, $(esc(streamlist)), $inlets, $outlets))
     else    
         return :($(esc(unitoplist))[$name] = UnitOp($name, $(esc(streamlist)), $inlets, $outlets, $(esc(func)), $(esc(params))))
+    end
+end
+
+
+macro unitophist(ex::Expr, name::String, streamlist::Symbol, unitoplist::Symbol)      
+    local inlets = String[]
+    local outlets = String[]
+    local func = nothing
+    local params = nothing
+    
+    for line in ex.args
+        match_comp = @capture(line, inlets --> [ins__])
+        if match_comp
+            for strm in ins
+                push!(inlets, strm)
+            end
+        end
+        
+        match_comp = @capture(line, outlets --> [outs__])
+        if match_comp
+            for strm in outs
+                push!(outlets, strm)
+            end
+        end
+
+        match_comp = @capture(line, calc --> unitopfunc_)
+        if match_comp
+            func = unitopfunc
+        end
+
+        match_comp = @capture(line, params --> unitopparams_)
+        if match_comp
+            params = unitopparams
+        end
+
+    end
+
+    if isnothing(func)
+        return :($(esc(unitoplist))[$name] = UnitOpHistory($name, $(esc(streamlist)), $inlets, $outlets))
+    else    
+        return :($(esc(unitoplist))[$name] = UnitOpHistory($name, $(esc(streamlist)), $inlets, $outlets, $(esc(func)), $(esc(params))))
     end
 end

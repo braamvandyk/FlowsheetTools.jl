@@ -2,15 +2,15 @@ module FlowsheetTools
 
 export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomponentlist!,
         Stream, StreamHistory, StreamList, StreamHistoryList, @stream, copystream!, deletestream!, renamestream!,
-        copystreamhistory!, deletestreamhistory!, renamestreamhistory!, readstreamhistory,
+        copystreamhistory!, deletestreamhistory!, renamestreamhistory!, readstreamhistory, showdata,
         UnitOp, UnitOpHistory, UnitOpList, UnitOpHistoryList,
-        BalanceBoundary, BalanceBoundaryHistory,
+        BalanceBoundary, BalanceBoundaryHistory, @boundary, @boundaryhist,
         calccorrections, closemb,
         conversion, selectivity,
-        @unitop, mixer!
+        @unitop, @unitophist, mixer!
 
 
-using JSON3, MacroTools, Optim, StructTypes, Statistics, Dates, DelimitedFiles
+using JSON3, MacroTools, Optim, StructTypes, Statistics, Dates, DelimitedFiles, PrettyTables
 import Base.setindex!
 import Base.getindex
 import Base.length

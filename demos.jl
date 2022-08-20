@@ -26,17 +26,17 @@ end "Ethylene" syscomps
 
 sysstreams = StreamList()
 
-@stream "mass" begin
+@stream mass begin
     "Ethylene" --> 2.8053
     "Ethane" --> 27.06192
     "Hydrogen" --> 2.21738
-end syscomps "Test" sysstreams
+end "Test" syscomps sysstreams
 
-@stream "mole" begin 
+@stream mole begin 
     "Ethylene" --> 0.1
     "Ethane" --> 0.9
     "Hydrogen" --> 1.1
-end syscomps "Product" sysstreams
+end "Product" syscomps sysstreams
 
 sysstreams["Test"].moleflows ≈ sysstreams["Product"].moleflows
 
@@ -70,30 +70,30 @@ sysstreams["Prod2"].totalmassflow ≈ 2.0 * sysstreams["Product"].totalmassflow
 # Define some streams
 sysstreams = StreamList()
 
-@stream "mole" begin
+@stream mole begin
     "Ethylene" --> 1.0
     "Hydrogen" --> 2.0
-end syscomps "Feed" sysstreams
+end "Feed" syscomps sysstreams
 
-@stream "mole" begin
+@stream mole begin
     "Ethylene" --> 0.1
     "Ethane" --> 0.9
     "Hydrogen" --> 1.1
-end syscomps "Product" sysstreams
+end "Product" syscomps sysstreams
 
 
-@stream "mole" begin
+@stream mole begin
     "Hydrogen" --> 1.1
-end syscomps "H2" sysstreams
+end "H2" syscomps sysstreams
 
-@stream "mole" begin
+@stream mole begin
     "Ethylene" --> 0.1
     "Ethane" --> 0.9
-end syscomps "C2" sysstreams
+end "C2" syscomps sysstreams
 
-@stream "mole" begin
+@stream mole begin
     "Hydrogen" --> 0.0
-end syscomps "Mixed" sysstreams
+end "Mixed" syscomps sysstreams
 
 # Define some unit ops
 sysunitops = UnitOpList()
@@ -116,7 +116,9 @@ end "Mixer" sysstreams sysunitops
 sysunitops["Mixer"]()
 
 # Define a mass balance boundary
-b = BalanceBoundary(sysunitops, ["Reactor", "Membrane"])
+@boundary begin
+    unitops --> ["Reactor", "Membrane"]
+end b sysunitops
 
 # Check the closures
 b.atomclosures
@@ -145,7 +147,9 @@ end "Reactor2" sysstreams sysunitops
     outlets --> ["C2", "H2"]
 end "Membrane2" sysstreams sysunitops
 
-b2 = BalanceBoundary(sysunitops, ["Reactor2", "Membrane2"])
+@boundary begin
+    unitops --> ["Reactor2", "Membrane2"]
+end b2 sysunitops
 
 # Get the correction factors on the inlets and outlets
 corrections = calccorrections(b2)
@@ -171,10 +175,12 @@ histstreams = StreamHistoryList()
 # Read in some stream histories
 histstreams["Feed"] = readstreamhistory(joinpath("streamhistories", "FeedStream.csv"), "Feed", syscomps; ismoleflow=true)
 histstreams["Product"] = readstreamhistory(joinpath("streamhistories", "ProdStream.csv"), "Product", syscomps; ismoleflow=true)
-
+histstreams
 # And mix them
 histstreams["Comb"] = histstreams["Feed"] + histstreams["Product"]
 
+feeddata = showdata(histstreams["Feed"]);
+println(feeddata)
 # And scale the result
 histstreams["Comb"] = 2.0 * histstreams["Comb"]
 
@@ -182,17 +188,21 @@ histstreams["Comb"] = 2.0 * histstreams["Comb"]
 
 # Test UnitOpHistory
 histops = UnitOpHistoryList()
-histops["RX101"] = UnitOpHistory("RX101", histstreams, ["Feed"], ["Product"])
 
+@unitophist begin
+    inlets --> ["Feed"]
+    outlets --> ["Product"]
+end "RX101" histstreams histops
 
 
 # Test BalanceBoundaryHistory
-bh = BalanceBoundaryHistory(histops, ["RX101"])
-
-conversion(bh, "Ethylene")
-conversion(bh, "Water")
+@boundaryhist begin
+    unitops --> ["RX101"]
+end bh histops
 
 corrections = calccorrections(bh)
 bh = closemb(bh)
 conversion(bh, "Ethylene")
 selectivity(bh, "Ethylene", "Ethane")
+
+print(showdata(bh))

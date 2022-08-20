@@ -289,9 +289,11 @@ function Base.setindex!(A::StreamList, X::Stream, idx::String)
     return nothing
 end
 
+
 function Base.getindex(A::StreamList, idx::String)
     return A.list[idx]
 end
+
 
 function Base.getindex(A::StreamList, idxs::Vector{String})
     res = Stream[]
@@ -300,6 +302,7 @@ function Base.getindex(A::StreamList, idxs::Vector{String})
     end
     return res
 end
+
 
 function Base.length(A::StreamList)
     return length(A.list)
@@ -348,7 +351,7 @@ end
 
 # Pretty printing for stream objects
 function Base.show(io::IO, s::Stream)
-    println(io, "Stream: ", s.name, " [Total mass flow: ", prettyround(s.totalmassflow), "]\n")
+    println(io, "Stream: ", s.name, "\nTotal mass flow: ", prettyround(s.totalmassflow), "\n")
     println(io, "Component\tMass Flow\tMolar Flow")
     println(io, "-"^42)
 
@@ -371,19 +374,41 @@ end
 
 # Pretty printing for stream history objects
 function Base.show(io::IO, s::StreamHistory)
-    println(io, "StreamHistory: $(s.name)\n")
-    println(io, "Components: \n")
-    println(io, "-"^11)
-
+    println(io, "StreamHistory: $(s.name)")
     for compname in s.comps
         comp = s.complist[compname]
-        println(io, " ", rpad(comp.name, 9))
+        println(io, "  ", rpad(comp.name, 9))
     end
 
     println(io)
-    println(io, "Data length: $(length(s.totalmassflow))")
+    println(io, "Data length:$(length(s.totalmassflow))")
     println(io, "Data starts:\t$(s.timestamps[begin])")
     println(io, "Data ends:\t$(s.timestamps[end])")
+end
+
+
+function  Base.show(io::IO, sl::StreamList)
+    println(io, "Stream list:")
+    for strm in sl.list
+        println(io, "  ", strm.first)
+    end
+end
+
+
+function  Base.show(io::IO, sl::StreamHistoryList)
+    println(io, "Stream list:")
+    if length(sl.list) > 0
+        for strm in sl.list
+            println(io, "  ", strm.first)
+        end
+        println(io)
+        strm = first(sl.list)
+        println(io, "Data length:\t$(length(strm.second.totalmassflow))")
+        println(io, "Data starts:\t$(strm.second.timestamps[begin])")
+        println(io, "Data ends:\t$(strm.second.timestamps[end])")    
+    else
+        println(io, "Empty list")
+    end
 end
 
 
@@ -406,22 +431,22 @@ The names of components must match those in the specified componentlist
         "Ethylene" --> 2.8053
         "Ethane" --> 27.06192
         "Hydrogen" --> 2.21738
-    end syscomps "Test" sysstreams
+    end "Test" syscomps sysstreams
 
     @stream "mole" begin 
         "Ethylene" --> 0.1
         "Ethane" --> 0.9
         "Hydrogen" --> 1.1
-    end syscomps "Product" sysstreams 
+    end "Product" syscomps sysstreams 
 
 """
-macro stream(flowtype::String, ex::Expr, complist::Symbol, name::String, streamlist::Symbol)      
+macro stream(flowtype::Symbol, ex::Expr, name::String, complist::Symbol, streamlist::Symbol)      
     local comps = String[]
     local flows = Float64[]
 
-    if lowercase(flowtype) == "mass"
+    if flowtype == :mass
         local ismoleflow = false
-    elseif lowercase(flowtype) == "mole"
+    elseif flowtype == :mole
         local ismoleflow = true
     else
         error("flow basis specification must be mass or mole")
@@ -561,7 +586,16 @@ function readstreamhistory(filename, streamname, complist; ismoleflow=false)
 end
 
 
+function showdata(hs::StreamHistory)
+    titles = vcat("Timestamp", hs.comps)
+    data  = hcat(hs.timestamps, hs.massflows')
 
+    str = pretty_table(String, data, header=titles)
+
+    return str
+end
+
+    
 
 
 

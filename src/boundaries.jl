@@ -243,10 +243,75 @@ function Base.show(io::IO, b::BalanceBoundary)
     end    
 end
 
+
 # Pretty printing for BalanceBoundary objects
 function Base.show(io::IO, b::BalanceBoundaryHistory)
     println(io, "Balance Boundary:\n")
     println(io, "Enclosed units: ", [u for u in b.units])
     println(io)
-    println(io, "Data length:    ", b.numdata)
+    println(io, "Data length:\t", b.numdata)
+    println(io, "Data starts:\t", b.total_in.timestamps[begin])
+    println(io, "Data ends:\t", b.total_in.timestamps[begin])
+end
+
+
+#----------------------------------------------------------------------------
+#
+#----Macros------------------------------------------------------------------
+#
+#----------------------------------------------------------------------------
+
+
+macro boundary(ex::Expr, name::Symbol, unitoplist::Symbol)      
+    local unitops = String[]
+    
+    for line in ex.args
+        match_comp = @capture(line, unitops --> [ous__])
+        if match_comp
+            for ou in ous
+                push!(unitops, ou)
+            end
+        end
+    end
+
+    return :($(esc(name)) = BalanceBoundary($(esc(unitoplist)), $unitops))
+end
+
+
+macro boundaryhist(ex::Expr, name::Symbol, unitoplist::Symbol)      
+    local unitops = String[]
+    
+    for line in ex.args
+        match_comp = @capture(line, unitops --> [ous__])
+        if match_comp
+            for ou in ous
+                push!(unitops, ou)
+            end
+        end
+    end
+
+    return :($(esc(name)) = BalanceBoundaryHistory($(esc(unitoplist)), $unitops))
+end
+
+#----------------------------------------------------------------------------
+# 
+#----Utilities---------------------------------------------------------------
+# 
+#----------------------------------------------------------------------------
+
+
+function showdata(bh::BalanceBoundaryHistory)
+    titles_in = bh.total_in.comps
+    titles_in .= "In:" .* titles_in
+    titles_out = vcat(bh.total_out.comps)
+    titles_out .= "Out:" .* titles_out
+    titles = vcat("Timestamp", titles_in, titles_out)
+
+    data_in = hcat(bh.total_in.timestamps, bh.total_in.massflows')
+    data_out = bh.total_out.massflows'
+    data = hcat(data_in, data_out)
+
+    str = pretty_table(String, data, header=titles)
+
+    return str
 end

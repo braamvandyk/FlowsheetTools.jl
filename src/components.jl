@@ -80,9 +80,9 @@ end
 
 
 function  Base.show(io::IO, cl::ComponentList)
-    println(io, "Component list:\n")
+    println(io, "Component list:")
     for comp in cl.list
-        println(io, comp.first)
+        println(io, "  ", comp.first)
     end
 end
 
