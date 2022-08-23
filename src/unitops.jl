@@ -5,9 +5,7 @@
 #----------------------------------------------------------------------------
 
 
-abstract type Unit end
-
-struct UnitOp <: Unit
+struct UnitOp
     name::String
 
     streamlist::StreamList

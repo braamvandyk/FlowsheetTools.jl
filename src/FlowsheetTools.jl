@@ -29,5 +29,6 @@ include("unitops.jl")
 include("boundaries.jl")
 include("kpis.jl")
 include("closure.jl")
+include("flowsheets.jl")
 
 end
