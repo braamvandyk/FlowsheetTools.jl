@@ -12,6 +12,7 @@ end
 function (fs::Flowsheet)(neworder = nothing)
     if isnothing(neworder)
         for i in fs.order
+            u = fs.unitops[i]
             fs.unitops[i].f!(u.streamlist, u.outlets, u.inlets, u.params)
         end
     else

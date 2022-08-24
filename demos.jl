@@ -206,3 +206,30 @@ conversion(bh, "Ethylene")
 selectivity(bh, "Ethylene", "Ethane")
 
 print(showdata(bh))
+
+
+# Test Flowsheet
+
+sysunitops = UnitOpList()
+
+@unitop begin
+    inlets --> ["Feed"]
+    outlets --> ["Product"]
+end "Reactor" sysstreams sysunitops
+
+@unitop begin
+    inlets --> ["Product"]
+    outlets --> ["C2", "H2"]
+end "Membrane" sysstreams sysunitops
+
+@unitop begin
+    inlets --> ["H2", "C2"]
+    outlets --> ["Mixed"]
+    calc --> mixer!
+end "Mixer" sysstreams sysunitops
+
+
+fs = Flowsheet([sysunitops["Reactor"]], [1])
+addunitop!(fs, [sysunitops["Membrane"], sysunitops["Mixer"]])
+
+fs()

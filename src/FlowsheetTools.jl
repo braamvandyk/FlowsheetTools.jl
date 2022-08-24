@@ -7,7 +7,8 @@ export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomp
         BalanceBoundary, BalanceBoundaryHistory, @boundary, @boundaryhist,
         calccorrections, closemb,
         conversion, selectivity,
-        @unitop, @unitophist, mixer!
+        @unitop, @unitophist, mixer!,
+        Flowsheet, addunitop!, setorder!
 
 
 using JSON3, MacroTools, Optim, StructTypes, Statistics, Dates, DelimitedFiles, PrettyTables
