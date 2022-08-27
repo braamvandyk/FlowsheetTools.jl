@@ -30,16 +30,16 @@ end
 struct UnitOpHistory
     name::String
 
-    # Number of historic data points
-    numdata::Integer
-
     streamlist::StreamHistoryList
     # Connected streams with history
     inlets::Array{String, 1}
     outlets::Array{String, 1}
 
+    f!::Function
+    params
+
     # Inner constructor to validate input data
-    function UnitOpHistory(name, numdata, streamlist, inlets, outlets)
+    function UnitOpHistory(name, streamlist, inlets, outlets, f!, params)
         numdata = length(streamlist[inlets[1]].totalmassflow)
         timestamps = streamlist[inlets[1]].timestamps
         
@@ -60,7 +60,16 @@ struct UnitOpHistory
             end
         end
 
-        new(name, numdata, streamlist, inlets, outlets)
+        new(name, streamlist, inlets, outlets, f!, params)
+    end
+end
+
+
+function (u::UnitOpHistory)(newparams = nothing)
+    if isnothing(newparams)
+        u.f!(u.streamlist, u.outlets, u.inlets, u.params)
+    else
+        u.f!(u.streamlist, u.outlets, u.inlets, newparams)
     end
 end
 
@@ -81,7 +90,13 @@ end
 #
 #----------------------------------------------------------------------------
 
+"""
+    UnitOp(name::String, streamlist::StreamList, inlets::Vector{String}, outlets::Vector{String})
+    UnitOp(name::String, streamlist::StreamList, inlets::Vector{String}, outlets::Vector{String}, f!::Function)
+    UnitOp(name::String, streamlist::StreamList, inlets::Vector{String}, outlets::Vector{String}, f!::Function, params)
 
+Constructor for a UnitOp. It is recommended to rather use the @unitop macro.
+"""
 function UnitOp(name::String, streamlist::StreamList, inlets::Vector{String}, outlets::Vector{String})
     return UnitOp(name, streamlist, inlets, outlets, passive, nothing)
 end
@@ -93,24 +108,38 @@ end
 
 
 """
-    UnitOpHistory(name, streamlist, inlets, outlets)
+    UnitOpHistory(name::String, streamlist::StreamHistoryList, inlets::Vector{String}, outlets::Vector{String})
+    UnitOpHistory(name::String, streamlist::StreamHistoryList, inlets::Vector{String}, outlets::Vector{String}, f!::Function)
+    UnitOpHistory(name::String, streamlist::StreamHistoryList, inlets::Vector{String}, outlets::Vector{String}, f!::Function, params)
 
-Constructor for a UnitOpHistory that defines the stream name and connected StreamHistory objects.
-The internal field *numdata* is calculated from the connected streams.
+Constructor for a UnitOp. It is recommended to rather use the @unitop macro.
 """
-function UnitOpHistory(name, streamlist, inlets, outlets)
-    numdata = length(streamlist[inlets[1]].totalmassflow)
-
-    UnitOpHistory(name, numdata, streamlist, inlets, outlets)
+function UnitOpHistory(name::String, streamlist::StreamHistoryList, inlets::Vector{String}, outlets::Vector{String})
+    return UnitOpHistory(name, streamlist, inlets, outlets, passive, nothing)
 end
 
 
+function UnitOpHistory(name::String, streamlist::StreamHistoryList, inlets::Vector{String}, outlets::Vector{String}, f!::Function)
+    return UnitOpHistory(name, streamlist, inlets, outlets, f!, nothing)
+end
+
+
+"""
+    UnitOpList()
+
+Constructor for an empty UnitOpList. Unit operations are added when created with the @unitop macro.
+"""
 function UnitOpList()
     l = Dict{String, UnitOp}()
     return UnitOpList(l)
 end
 
 
+"""
+    UnitOpHistoryList()
+
+Constructor for an empty UnitOpHistoryList. Unit operations are added when created with the @unitophist macro.
+"""
 function UnitOpHistoryList()
     l = Dict{String, UnitOpHistory}()
     return UnitOpHistoryList(l)
@@ -123,18 +152,46 @@ end
 #
 #----------------------------------------------------------------------------
 
+"""
+    passive(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
 
+Default calculation for UnitOps. Simply a placeholder - does no calculation.
+"""
 function passive(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
     return nothing
 end
 
 
+"""
+    mixer!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
+    mixer!(streamlist::StreamHistoryList, outlets::Vector{String}, inlets::Vector{String}, params)
+
+Calculation for mixer UnitOps. Combines all feed streams into a single outlet stream.
+Will error if more than one outlet stream is defined. Values in `params` are ignored.
+"""
 function mixer!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
     @assert length(outlets) == 1 "mixers can have only one outlet stream"
 
     old = streamlist[outlets[1]]
         
     tempstream = Stream(old.name, old.complist, String[], Float64[])
+    for inlet in inlets[1:end]
+        tempstream += streamlist[inlet]
+    end
+
+    tempstream = renamestream(tempstream, old.name)
+    streamlist[old.name] = tempstream
+    
+    return nothing
+end
+
+
+function mixer!(streamlist::StreamHistoryList, outlets::Vector{String}, inlets::Vector{String}, params)
+    @assert length(outlets) == 1 "mixers can have only one outlet stream"
+
+    old = streamlist[inlets[1]]
+        
+    tempstream = StreamHistory(old.name, old.complist, String[] DateTime[], Matrix{Float64}())
     for inlet in inlets[1:end]
         tempstream += streamlist[inlet]
     end
@@ -211,8 +268,8 @@ function Base.show(io::IO, u::UnitOpHistory)
     println(io)
     println(io, "Product streams: ", [s for s in u.outlets])
     println(io)
-    println(io, "Data length:\t$(u.numdata)")
     strm = first(u.streamlist.list)
+    println(io, "Data length:\t$(strm.second.numdata)")
     println(io, "Data starts:\t$(strm.second.timestamps[begin])")
     println(io, "Data ends:\t$(strm.second.timestamps[end])") 
 end
@@ -318,6 +375,31 @@ macro unitop(ex::Expr, name::String, streamlist::Symbol, unitoplist::Symbol)
 end
 
 
+"""
+Defines a `UnitOpHist with` the specified name and connected streams.
+
+@unitophist begin
+    inlets --> ["H2", "C2"]
+    outlets --> ["Mixed"]
+    calc --> mixer!
+end "Mixer" histstreams histunitops
+
+This will create a UnitOpHist named "Mixer", saved into histunitops["Mixer"].
+The specified streams refer to entries in histstreams::StreamHistoryList.
+
+Two optional parameters may be specified, i.e. calc and params:
+
+calc is a function, e.g. 
+    function mixer!(streamlist::StreamHistoryList, outlets::Vector{String}, inlets::Vector{String}, params)
+params is an iterable passed to the function.
+
+Together, these specify a calculation to perform to calculate the outlet(s) from the inlet(s), when
+calling `histunitops["Mixer"]()`
+
+Alternative parameters may also be specified in the call, e.g.
+    histunitops["Mixer"]([1, 2, 3])
+
+"""
 macro unitophist(ex::Expr, name::String, streamlist::Symbol, unitoplist::Symbol)      
     local inlets = String[]
     local outlets = String[]

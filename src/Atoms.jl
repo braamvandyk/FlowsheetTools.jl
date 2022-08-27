@@ -1,3 +1,7 @@
+"""
+Module Atoms holds the names, symbols and atomic masses of the elements of the Periodic Table.
+No exports - use Atoms.atomsymbols and Atoms.atomweights
+"""
 module Atoms
 
 using DelimitedFiles

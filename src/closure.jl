@@ -106,8 +106,7 @@ function closemb(boundary::BalanceBoundary, corrections=nothing; totalweight=1.0
 end
 
 
-
-function calccorrections(boundary::BalanceBoundaryHistory; totalweight=1.0, elementweight=1.0)         
+function calccorrections(boundary::BalanceBoundaryHistory; totalweight=1.0, elementweight=1.0) 
     # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
     streamlist = first(boundary.unitlist.list).second.streamlist  

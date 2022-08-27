@@ -64,6 +64,14 @@ end
 #----------------------------------------------------------------------------
 
 
+"""
+    BalanceBoundary(unitlist, units)
+
+Constructor for a BalanceBoundary. Inputs are a UnitOpList and and array of names of UnitOps in the list
+that are inside the boundary. Inlet and outlet streams crossing the boundary are automatically calculated.
+
+Fill error if there are either no inlets or outlets.
+"""
 function BalanceBoundary(unitlist, units)
 
 #Figure out which streams cross the boundary:
@@ -108,6 +116,9 @@ function BalanceBoundary(unitlist, units)
     inlets = inlets[keep_in]
     outlets = outlets[keep_out]
 
+    @assert length(inlets) > 0 "zero inlet streams to the boundary"
+    @assert length(outlets) > 0 "zero outlet streams from the boundary"
+
     # 2c. And convert to list of names
     inletnames = String[]
     outletnames = String[]
@@ -137,6 +148,14 @@ function BalanceBoundary(unitlist, units)
 end
 
 
+"""
+    BalanceBoundaryHistory(unitlist, units)
+
+Constructor for a BalanceBoundaryHistory. Inputs are a UnitOpHistoryList and and array of names of `UnitOpHistory`s in the list
+that are inside the boundary. Inlet and outlet streams crossing the boundary are automatically calculated.
+
+Fill error if there are either no inlets or outlets.
+"""
 function BalanceBoundaryHistory(unitlist::UnitOpHistoryList, units::Vector{String})
     #Figure out which streams cross the boundary:
     #    1. Take all the input stream from the units
@@ -261,7 +280,13 @@ end
 #
 #----------------------------------------------------------------------------
 
+"""
+    @boundary begin
+        unitops --> ["Reactor", "Membrane"]
+    end b sysunitops
 
+Create a boundary, b, that includes UnitOps "Reactor" amd "Membrane" from the UnitOpsList sysunitops.
+"""
 macro boundary(ex::Expr, name::Symbol, unitoplist::Symbol)      
     local unitops = String[]
     
@@ -278,6 +303,13 @@ macro boundary(ex::Expr, name::Symbol, unitoplist::Symbol)
 end
 
 
+"""
+    @boundaryhist begin
+        unitops --> ["RX101"]
+    end bh histops
+
+Create a boundary, bh, that includes UnitOps "RX101" from the UnitOpsList histops.
+"""
 macro boundaryhist(ex::Expr, name::Symbol, unitoplist::Symbol)      
     local unitops = String[]
     
@@ -293,6 +325,7 @@ macro boundaryhist(ex::Expr, name::Symbol, unitoplist::Symbol)
     return :($(esc(name)) = BalanceBoundaryHistory($(esc(unitoplist)), $unitops))
 end
 
+
 #----------------------------------------------------------------------------
 # 
 #----Utilities---------------------------------------------------------------
@@ -300,10 +333,18 @@ end
 #----------------------------------------------------------------------------
 
 
+"""
+    showdata(bh::BalanceBoundaryHistory)
+
+Returns a data table for a BalanceBoundaryHistory, as a String.
+
+Example:
+    print(showdata(bh))
+"""
 function showdata(bh::BalanceBoundaryHistory)
-    titles_in = bh.total_in.comps
+    titles_in = copy(bh.total_in.comps)
     titles_in .= "In:" .* titles_in
-    titles_out = vcat(bh.total_out.comps)
+    titles_out = copy(vcat(bh.total_out.comps))
     titles_out .= "Out:" .* titles_out
     titles = vcat("Timestamp", titles_in, titles_out)
 

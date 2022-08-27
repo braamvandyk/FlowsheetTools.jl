@@ -12,13 +12,12 @@ end
 function (fs::Flowsheet)(neworder = nothing)
     if isnothing(neworder)
         for i in fs.order
-            u = fs.unitops[i]
-            fs.unitops[i].f!(u.streamlist, u.outlets, u.inlets, u.params)
+            fs.unitops[i]()
         end
     else
         for i in neworder
             u = fs.unitops[i]
-            u.f!(u.streamlist, u.outlets, u.inlets, u.params)
+            u()
         end
     end
 

@@ -30,6 +30,7 @@ end
     Component(name, atoms, counts)
 
 Constructor for molecular species that defines the atomic make-up.
+It is recommended to rather use the @comp macro to create components.
 """
 function Component(name, atoms, counts)
     Mr = 0.0
@@ -39,7 +40,11 @@ function Component(name, atoms, counts)
     return Component(name, atoms, counts, Mr)
 end
 
+"""
+    ComponentList()
 
+Constructor for an empty component list. Components are added when created via the @comp macro
+"""
 function ComponentList()
     l = Dict{String, Component}()
     return ComponentList(l)
@@ -164,7 +169,7 @@ end
 
 Read a list of components into a ComponentList
 The folder is specified and `filenames` contains a list of filenames without extentions.
-
+The component files are .json files created with `writecomp()`
 """
 function readcomponentlist!(complist::ComponentList, folder::String, filenames::Vector{String})
     count = 0

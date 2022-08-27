@@ -4,6 +4,7 @@
 # All mass / mole / atom flows in and out are in the BalanceBoundary, 
 # with mass and elemental closures already calculated.
 
+
 """
     conversion(b::BalanceBoundary, component::String)
     conversion(b::BalanceBoundaryHistory, component::String)

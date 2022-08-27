@@ -182,7 +182,7 @@ histstreams["Comb"] = histstreams["Feed"] + histstreams["Product"]
 feeddata = showdata(histstreams["Feed"]);
 println(feeddata)
 # And scale the result
-histstreams["Comb"] = 2.0 * histstreams["Comb"]
+histstreams["Comb2"] = 2.0 * histstreams["Comb"]
 
 #-UnitOps etc with historical data-----
 
@@ -207,6 +207,12 @@ selectivity(bh, "Ethylene", "Ethane")
 
 print(showdata(bh))
 
+@unitophist begin
+    inlets --> ["Feed", "Product"]
+    outlets --> ["Comb2"]
+    calc --> mixer!
+end "Mixer" histstreams histops
+histops["Mixer"]()
 
 # Test Flowsheet
 

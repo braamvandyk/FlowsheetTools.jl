@@ -64,6 +64,8 @@ end
 
 Constructor for a stream that defines the stream name and component flows.
 The mass flows are specified and a molar composition and atomic molar flows calculated.
+
+It is recommeded to rather use the @stream macro to create streams.
 """
 function Stream(name, complist, comps, flows, ismoleflow=false)
     numcomps = length(comps)
@@ -111,6 +113,8 @@ Constructor for a stream history object that defines the stream name and compone
 for various past measurements.
 The mass flows are specified and a molar composition and atomic molar flows calculated.
 The mass flow history is passed as a matrix where each column is a datum
+
+It is recommended to rather create StreamHistory objects via readstreamhistory(filename, streamname, complist).
 """
 function StreamHistory(name, complist, comps, timestamps, flowshistory, ismoleflow=false)
     numcomps = length(comps)
@@ -157,12 +161,22 @@ function StreamHistory(name, complist, comps, timestamps, flowshistory, ismolefl
 end
 
 
+"""
+    Streamlist()
+
+Constructor for an empty stream list. Streams are added when created via the @stream macro
+"""
 function StreamList()
     l = Dict{String, Stream}()
     return StreamList(l)
 end
 
 
+"""
+    StreamHistorylist()
+
+Constructor for an empty stream list with historical data. Streams are added when read from file with readstreamhistory().
+"""
 function StreamHistoryList()
     l = Dict{String, StreamHistory}()
     return StreamHistoryList(l)
@@ -267,6 +281,13 @@ function Base.:*(a::T, b::StreamHistory) where T <: Real
     return StreamHistory(b.name, b.complist, b.comps, b.timestamps, a .* b.massflows)
 end
 
+
+"""
+    Base.*(b::StreamHistory, a::T) where T <: Real
+
+Extend the multiplication operator to scale a stream history's flows by a scalar value.
+Used in mass balance reconciliations to apply flow corrections.
+"""
 function Base.:*(b::StreamHistory, a::T) where T <: Real
     return StreamHistory(b.name, b.complist, b.comps, b.timestamps, a .* b.massflows)
 end
@@ -516,8 +537,18 @@ function renamestream!(list::StreamList, from::String, to::String)
 end
 
 
+"""
+    function renamestream(str::Stream, newname::String)
+
+Returns a copy of the stream with the new name. Internal use only, not exported.
+"""
 function renamestream(str::Stream, newname::String)
     return Stream(newname, str.complist, str.comps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)  
+end
+
+
+function renamestream(str::StreamHistory, newname::String)
+    return StreamHistory(newname, str.numdata, str.complist, str.comps, str.timestamps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)  
 end
 
 
@@ -561,6 +592,14 @@ function renamestreamhistory!(list::StreamHistoryList, from::String, to::String)
     return nothing
 end
 
+"""
+    function renamestreamhistory(str::Stream, newname::String)
+
+Returns a copy of the stream with the new name. Internal use only, not exported.
+"""
+function renamestreamhistory(str::StreamHistory, newname::String)
+    return StreamHistory(newname, str.numdata, str.complist, str.comps, str.timestamps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)  
+end
 
 """
 
@@ -585,7 +624,11 @@ function readstreamhistory(filename, streamname, complist; ismoleflow=false)
     return StreamHistory(streamname, complist, comps, timestamps, transpose(flows), ismoleflow)
 end
 
+"""
+    showdata(hs::StreamHistory)
 
+Display a table of the component flow history from hs::StreamHistory.
+"""
 function showdata(hs::StreamHistory)
     titles = vcat("Timestamp", hs.comps)
     data  = hcat(hs.timestamps, hs.massflows')
