@@ -12,7 +12,7 @@ function findsteps(data; window=3, noiseperc=0.9)
     @assert numdata > 2*window "Too few data points ($numdata) for the selectived window size ($window)."
     
     # Calculate the forward and reverse moving averages `window` points from i
-    # i.e. the actual window is `window` + 1 points wide
+    # i.e. the actual window is `window + 1` points wide
     for i ∈ eachindex(data)
         if i <= window
             revmean[i] = mean(data[1:i])
@@ -67,7 +67,8 @@ function findsteps(data; window=3, noiseperc=0.9)
         end
     end
 
-    # Find all the steps - reported as the index of the first point AFTER the step
+    # Find all the steps - reported as the index of the first point AFTER the step,
+    # i.e. the first point of the new group
     results = findall(steps)
 
     return results

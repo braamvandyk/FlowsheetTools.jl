@@ -188,16 +188,17 @@ end
 
 function mixer!(streamlist::StreamHistoryList, outlets::Vector{String}, inlets::Vector{String}, params)
     @assert length(outlets) == 1 "mixers can have only one outlet stream"
-
+      
     old = streamlist[inlets[1]]
-        
-    tempstream = StreamHistory(old.name, old.complist, String[] DateTime[], Matrix{Float64}())
-    for inlet in inlets[1:end]
+    tempstream = StreamHistory(old.name, old.numdata, old.complist, old.comps, old.timestamps, 
+                               copy(old.massflows), copy(old.moleflows), copy(old.totalmassflow), copy(old.atomflows))
+
+    for inlet in inlets[2:end]
         tempstream += streamlist[inlet]
     end
 
-    tempstream = renamestream(tempstream, old.name)
-    streamlist[old.name] = tempstream
+    tempstream = renamestream(tempstream, outlets[1])
+    streamlist[outlets[1]] = tempstream
     
     return nothing
 end

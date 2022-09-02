@@ -184,18 +184,30 @@ println(feeddata)
 # And scale the result
 histstreams["Comb2"] = 2.0 * histstreams["Comb"]
 
+
 #-UnitOps etc with historical data-----
 
 # Test UnitOpHistory
 histops = UnitOpHistoryList()
 
 @unitophist begin
+    inlets --> ["Feed", "Product"]
+    outlets --> ["Comb2"]
+    calc --> mixer!
+end "Mixer" histstreams histops
+histops["Mixer"]()
+
+histstreams["Comb"].massflows == histstreams["Comb2"].massflows
+histstreams["Comb"].comps == histstreams["Comb2"].comps
+histstreams["Comb"].timestamps == histstreams["Comb2"].timestamps
+
+
+# Test BalanceBoundaryHistory
+@unitophist begin
     inlets --> ["Feed"]
     outlets --> ["Product"]
 end "RX101" histstreams histops
 
-
-# Test BalanceBoundaryHistory
 @boundaryhist begin
     unitops --> ["RX101"]
 end bh histops
@@ -207,12 +219,6 @@ selectivity(bh, "Ethylene", "Ethane")
 
 print(showdata(bh))
 
-@unitophist begin
-    inlets --> ["Feed", "Product"]
-    outlets --> ["Comb2"]
-    calc --> mixer!
-end "Mixer" histstreams histops
-histops["Mixer"]()
 
 # Test Flowsheet
 
@@ -237,5 +243,8 @@ end "Mixer" sysstreams sysunitops
 
 fs = Flowsheet([sysunitops["Reactor"]], [1])
 addunitop!(fs, [sysunitops["Membrane"], sysunitops["Mixer"]])
-
 fs()
+
+sysstreams["Dummy"] = sysstreams["H2"] + sysstreams["C2"]
+sysstreams["Dummy"].massflows == sysstreams["Mixed"].massflows
+sysstreams["Dummy"].atomflows == sysstreams["Mixed"].atomflows
