@@ -8,10 +8,10 @@ export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomp
         calccorrections, closemb,
         conversion, selectivity,
         @unitop, @unitophist, mixer!,
-        Flowsheet, addunitop!, setorder!
+        Flowsheet, addunitop!, setorder!, generateBFD
 
 
-using JSON3, MacroTools, Optim, StructTypes, Statistics, Dates, DelimitedFiles, PrettyTables
+using JSON3, MacroTools, Optim, StructTypes, Statistics, Dates, DelimitedFiles, PrettyTables, Kroki
 import Base.setindex!
 import Base.getindex
 import Base.length

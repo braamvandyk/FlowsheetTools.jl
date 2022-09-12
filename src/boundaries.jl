@@ -290,6 +290,7 @@ function boundarystreams(unitlist::UnitOpList, units::Vector{String})
 
     inlets = Stream[]
     outlets = Stream[]
+    internals = Stream[]
 
     # 1. Take all the input stream from the units 
     for unitname in units
@@ -312,6 +313,7 @@ function boundarystreams(unitlist::UnitOpList, units::Vector{String})
     for (i, stream) in enumerate(inlets)
         if stream in outlets
             keep_in[i] = false
+            push!(internals, stream) # only need this in this loop, as any internal stream is some block's inlet
         end
     end
     for (i, stream) in enumerate(outlets)
@@ -327,7 +329,7 @@ function boundarystreams(unitlist::UnitOpList, units::Vector{String})
     @assert length(inlets) > 0 "zero inlet streams to the boundary"
     @assert length(outlets) > 0 "zero outlet streams from the boundary"
 
-    return inlets, outlets
+    return inlets, outlets, internals
 end
 
 
