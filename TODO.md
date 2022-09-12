@@ -7,4 +7,5 @@
 5. [ ] Define unit tests for CI at some future point
 6. [ ] Add docstrings to functions without them
 7. [ ] Add some form of feedback when a Flowsheet executes
-
+8. [ ] Add callbacks to mermaid diagram to display streams
+9. [ ] Add pretty prining for flowsheets
