@@ -76,3 +76,11 @@ function setorder!(fs::Flowsheet, neworder)
 
     return nothing
 end
+
+
+# function generateBFD(fs:Flowsheet)
+#     # 1. Find all the feed and product streams. We need to assign nodes to them for the diagram, olr they won't get rendered
+#     # 2. Iterate through the blocks and add them to the 
+    
+#     for i in fs.order
+#         u = fs.unitops[i]

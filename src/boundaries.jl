@@ -72,54 +72,11 @@ that are inside the boundary. Inlet and outlet streams crossing the boundary are
 
 Fill error if there are either no inlets or outlets.
 """
-function BalanceBoundary(unitlist, units)
+function BalanceBoundary(unitlist::UnitOpList, units::Vector{String})
+    # Get the streams that cross the boundary
+    inlets, outlets = boundarystreams(unitlist, units)
 
-#Figure out which streams cross the boundary:
-#    1. Take all the input stream from the units
-#    2. Subtract the ones that are product stream, as they will be internal streams
-#       Do the same for outlet streams, just the other way around
-#    3. Calculate the elemental closures
-
-    inlets = Stream[]
-    outlets = Stream[]
-
-    # 1. Take all the input stream from the units 
-    for unitname in units
-        unit = unitlist[unitname]
-
-        for feedname in unit.inlets
-            feed = unit.streamlist[feedname]
-            push!(inlets, feed)
-        end
-        for prodname in unit.outlets
-            prod = unit.streamlist[prodname]
-            push!(outlets, prod)
-        end
-    end
-    
-    # 2a. Check which ones should be kept.
-    # Don't delete now, or the check on outlets will miss the ones already deleted from inlets!
-    keep_in = trues(length(inlets))
-    keep_out = trues(length(outlets))
-    for (i, stream) in enumerate(inlets)
-        if stream in outlets
-            keep_in[i] = false
-        end
-    end
-    for (i, stream) in enumerate(outlets)
-        if stream in inlets
-            keep_out[i] = false
-        end
-    end
-
-    # 2b. Now delete the ones we don't want
-    inlets = inlets[keep_in]
-    outlets = outlets[keep_out]
-
-    @assert length(inlets) > 0 "zero inlet streams to the boundary"
-    @assert length(outlets) > 0 "zero outlet streams from the boundary"
-
-    # 2c. And convert to list of names
+    # Convert to list of names
     inletnames = String[]
     outletnames = String[]
 
@@ -157,49 +114,10 @@ that are inside the boundary. Inlet and outlet streams crossing the boundary are
 Fill error if there are either no inlets or outlets.
 """
 function BalanceBoundaryHistory(unitlist::UnitOpHistoryList, units::Vector{String})
-    #Figure out which streams cross the boundary:
-    #    1. Take all the input stream from the units
-    #    2. Subtract the ones that are product stream, as they will be internal streams
-    #       Do the same for outlet streams, just the other way around
-    #    3. Calculate the elemental closures
-    
-    inlets = StreamHistory[]
-    outlets = StreamHistory[]
+    # Get the streams that cross the boundary
+    inlets, outlets = boundarystreams(unitlist, units)
 
-    # 1. Take all the input stream from the units 
-    for unitname in units
-        unit = unitlist[unitname]
-
-        for feedname in unit.inlets
-            feed = unit.streamlist[feedname]
-            push!(inlets, feed)
-        end
-        for prodname in unit.outlets
-            prod = unit.streamlist[prodname]
-            push!(outlets, prod)
-        end
-    end
-    
-    # 2a. Check which ones should be kept.
-    # Don't delete now, or the check on outlets will miss the ones already deleted from inlets!
-    keep_in = trues(length(inlets))
-    keep_out = trues(length(outlets))
-    for (i, stream) in enumerate(inlets)
-        if stream in outlets
-            keep_in[i] = false
-        end
-    end
-    for (i, stream) in enumerate(outlets)
-        if stream in inlets
-            keep_out[i] = false
-        end
-    end
-
-    # 2b. Now delete the ones we don't want
-    inlets = inlets[keep_in]
-    outlets = outlets[keep_out]
-
-    # 2c. And convert to list of names
+    # Convert to list of names
     inletnames = String[]
     outletnames = String[]
 
@@ -355,4 +273,109 @@ function showdata(bh::BalanceBoundaryHistory)
     str = pretty_table(String, data, header=titles)
 
     return str
+end
+
+
+"""
+    inlets, outlets = boundarystreams(unitlist, units)
+
+Find the streams that enter and leave the boundary that includes the specified unitops.
+"""
+function boundarystreams(unitlist::UnitOpList, units::Vector{String})
+    #Figure out which streams cross the boundary:
+    #    1. Take all the input stream from the units
+    #    2. Subtract the ones that are product stream, as they will be internal streams
+    #       Do the same for outlet streams, just the other way around
+    #    3. Calculate the elemental closures
+
+    inlets = Stream[]
+    outlets = Stream[]
+
+    # 1. Take all the input stream from the units 
+    for unitname in units
+        unit = unitlist[unitname]
+
+        for feedname in unit.inlets
+            feed = unit.streamlist[feedname]
+            push!(inlets, feed)
+        end
+        for prodname in unit.outlets
+            prod = unit.streamlist[prodname]
+            push!(outlets, prod)
+        end
+    end
+
+    # 2a. Check which ones should be kept.
+    # Don't delete now, or the check on outlets will miss the ones already deleted from inlets!
+    keep_in = trues(length(inlets))
+    keep_out = trues(length(outlets))
+    for (i, stream) in enumerate(inlets)
+        if stream in outlets
+            keep_in[i] = false
+        end
+    end
+    for (i, stream) in enumerate(outlets)
+        if stream in inlets
+            keep_out[i] = false
+        end
+    end
+
+    # 2b. Now delete the ones we don't want
+    inlets = inlets[keep_in]
+    outlets = outlets[keep_out]
+
+    @assert length(inlets) > 0 "zero inlet streams to the boundary"
+    @assert length(outlets) > 0 "zero outlet streams from the boundary"
+
+    return inlets, outlets
+end
+
+
+function boundarystreams(unitlist::UnitOpHistoryList, units::Vector{String})
+    #Figure out which streams cross the boundary:
+    #    1. Take all the input stream from the units
+    #    2. Subtract the ones that are product stream, as they will be internal streams
+    #       Do the same for outlet streams, just the other way around
+    #    3. Calculate the elemental closures
+
+    inlets = StreamHistory[]
+    outlets = StreamHistory[]
+
+    # 1. Take all the input stream from the units 
+    for unitname in units
+        unit = unitlist[unitname]
+
+        for feedname in unit.inlets
+            feed = unit.streamlist[feedname]
+            push!(inlets, feed)
+        end
+        for prodname in unit.outlets
+            prod = unit.streamlist[prodname]
+            push!(outlets, prod)
+        end
+    end
+
+    # 2a. Check which ones should be kept.
+    # Don't delete now, or the check on outlets will miss the ones already deleted from inlets!
+    keep_in = trues(length(inlets))
+    keep_out = trues(length(outlets))
+    for (i, stream) in enumerate(inlets)
+        if stream in outlets
+            keep_in[i] = false
+        end
+    end
+    for (i, stream) in enumerate(outlets)
+        if stream in inlets
+            keep_out[i] = false
+        end
+    end
+
+    # 2b. Now delete the ones we don't want
+    inlets = inlets[keep_in]
+    outlets = outlets[keep_out]
+
+    @assert length(inlets) > 0 "zero inlet streams to the boundary"
+    @assert length(outlets) > 0 "zero outlet streams from the boundary"
+
+    return inlets, outlets
 end
