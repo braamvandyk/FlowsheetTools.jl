@@ -174,13 +174,12 @@ function generateBFD(fs::Flowsheet)
         end
     end
 
-   
-    mermaidlines = "graph LR\n"
+    mermaidlines = "%%{init: {'theme': 'default', 'themeVariables': { 'fontSize': '14'}}}%%\ngraph LR\n"
     for stream in streams
         if stream[1] == " " # Feed stream
-            mermaidline = "$(stream[2])( ) -->|$(stream[2])| $(stream[3])[$(stream[3])]"
+            mermaidline = "$(stream[2])([ ]) -->|$(stream[2])| $(stream[3])[$(stream[3])]"
         elseif stream[3] == " " # Product stream
-            mermaidline = "$(stream[1])[$(stream[1])] -->|$(stream[2])| $(stream[2])( )"
+            mermaidline = "$(stream[1])[$(stream[1])] -->|$(stream[2])| $(stream[2])([ ])"
         else
             mermaidline = "$(stream[1])[$(stream[1])] -->|$(stream[2])| $(stream[3])[$(stream[3])]"
         end
