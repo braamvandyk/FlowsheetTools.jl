@@ -7,12 +7,12 @@
 struct BalanceBoundary
     # Units included in the boundary
     unitlist::UnitOpList
-    units::Array{String, 1}
+    units::Vector{String}
 
     # Streams crossing the boundary limits
     # Calculate from inlets and outlets of included unit ops
-    inlets::Array{String, 1}
-    outlets::Array{String, 1}
+    inlets::Vector{String}
+    outlets::Vector{String}
 
     # Combined inlet and outlet streams
     total_in::Stream
@@ -29,25 +29,25 @@ end
 struct BalanceBoundaryHistory
     # Units included in the boundary
     unitlist::UnitOpHistoryList
-    units::Array{String, 1}
+    units::Vector{String}
 
     # Number of historic data points
     numdata::Integer
 
     # Streams crossing the boundary limits
     # Calculate from inlets and outlets of included unit ops
-    inlets::Array{String, 1}
-    outlets::Array{String, 1}
+    inlets::Vector{String}
+    outlets::Vector{String}
 
     # Combined inlet and outlet streams
     total_in::StreamHistory
     total_out::StreamHistory
 
     # Total mass balance closure: (out - in)/in
-    closure::Array{Float64, 1}
+    closure::Vector{Float64}
 
     # Elemental closures, Dict{String, Float64}
-    atomclosures::Array{Dict{String, Float64}, 1}
+    atomclosures::Vector{Dict{String, Float64}}
 
 
     function BalanceBoundaryHistory(unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
@@ -136,7 +136,7 @@ function BalanceBoundaryHistory(unitlist::UnitOpHistoryList, units::Vector{Strin
     closure = total_out.totalmassflow./total_in.totalmassflow
     numdata = length(closure)
 
-    atomclosurehistory = Array{Dict{String, Float64}, 1}(undef, numdata)
+    atomclosurehistory = Vector{Dict{String, Float64}}(undef, numdata)
 
 
     for datum in 1:numdata

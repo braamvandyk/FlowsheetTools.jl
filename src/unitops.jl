@@ -11,8 +11,8 @@ struct UnitOp
     streamlist::StreamList
 
     # Connected streams
-    inlets::Array{String, 1}
-    outlets::Array{String, 1}
+    inlets::Vector{String}
+    outlets::Vector{String}
 
     f!::Function
     params
@@ -32,8 +32,8 @@ struct UnitOpHistory
 
     streamlist::StreamHistoryList
     # Connected streams with history
-    inlets::Array{String, 1}
-    outlets::Array{String, 1}
+    inlets::Vector{String}
+    outlets::Vector{String}
 
     f!::Function
     params

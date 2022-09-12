@@ -9,11 +9,11 @@ struct Stream
     name::String
 
     complist::ComponentList
-    comps::Array{String, 1}
+    comps::Vector{String}
 
     # Specifiy mass flows, calculate mole flows
-    massflows::Array{Float64, 1}
-    moleflows::Array{Float64, 1}
+    massflows::Vector{Float64}
+    moleflows::Vector{Float64}
     totalmassflow::Float64
 
     # Molar flow of atoms, calculated from above
@@ -28,17 +28,17 @@ struct StreamHistory
     numdata::Integer
     
     complist::ComponentList
-    comps::Array{String, 1}
+    comps::Vector{String}
 
-    timestamps::Array{DateTime, 1}
+    timestamps::Vector{DateTime}
     
     # Specifiy mass flows, calculate mole flows
-    massflows::Array{Float64, 2}
-    moleflows::Array{Float64, 2}
-    totalmassflow::Array{Float64, 1}
+    massflows::Matrix{Float64}
+    moleflows::Matrix{Float64}
+    totalmassflow::Vector{Float64}
 
     # Molar flow of atoms, calculated from above
-    atomflows::Array{Dict{String, Float64}, 1}
+    atomflows::Vector{Dict{String, Float64}}
 end
 
 
@@ -126,7 +126,7 @@ function StreamHistory(name, complist, comps, timestamps, flowshistory, ismolefl
     massflowshistory = zeros(numcomps, numdata)
     moleflowshistory = zeros(numcomps, numdata)
 
-    atomflowshistory = Array{Dict{String, Float64}, 1}(undef, numdata)
+    atomflowshistory = Vector{Dict{String, Float64}}(undef, numdata)
     totalmassflowhistory = zeros(numdata)
     
     for datum in 1:numdata
