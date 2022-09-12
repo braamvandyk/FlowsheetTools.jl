@@ -75,12 +75,12 @@ end
 
 
 struct UnitOpList
-    list
+    list::Dict{String, UnitOp}
 end
 
 
 struct UnitOpHistoryList
-    list
+    list::Dict{String, UnitOpHistory}
 end
 
 

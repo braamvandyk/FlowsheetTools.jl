@@ -241,8 +241,8 @@ end "Membrane" sysstreams sysunitops
 end "Mixer" sysstreams sysunitops
 
 
-fs = Flowsheet([sysunitops["Reactor"]], [1])
-addunitop!(fs, [sysunitops["Membrane"], sysunitops["Mixer"]])
+fs = Flowsheet(sysunitops, ["Reactor"], [1])
+addunitop!(fs, ["Membrane", "Mixer"])
 fs()
 
 sysstreams["Dummy"] = sysstreams["H2"] + sysstreams["C2"]

@@ -5,18 +5,20 @@
 #----------------------------------------------------------------------------
 
 struct Flowsheet
-    unitops::Vector{UnitOp}
+    unitlist::UnitOpList
+    units::Vector{String}
+
     order::Vector{Int}
 end
 
 function (fs::Flowsheet)(neworder = nothing)
     if isnothing(neworder)
         for i in fs.order
-            fs.unitops[i]()
+            fs.unitlist[fs.units[i]]()
         end
     else
         for i in neworder
-            u = fs.unitops[i]
+            u = fs.units[i]
             u()
         end
     end
@@ -32,18 +34,26 @@ end
 #----------------------------------------------------------------------------
 
 
-function addunitop!(fs::Flowsheet, u::UnitOp)
-    push!(fs.unitops, u)
-    push!(fs.order, length(fs.order) + 1)
+function addunitop!(fs::Flowsheet, u::String)
+    if haskey(fs.unitlist.list, u)
+        push!(fs.units, u)
+        push!(fs.order, length(fs.order) + 1)
+    else
+        error("unitop $u not defined in list $(fs.unitlist)")
+    end
 
     return nothing
 end
 
 
-function addunitop!(fs::Flowsheet, us::Vector{UnitOp})
+function addunitop!(fs::Flowsheet, us::Vector{String})
     for u in us
-        push!(fs.unitops, u)
-        push!(fs.order, length(fs.order) + 1)
+        if haskey(fs.unitlist.list, u)
+            push!(fs.units, u)
+            push!(fs.order, length(fs.order) + 1)
+        else
+            error("unitop $u not defined in list $(fs.unitlist)")
+        end
     end
 
     return nothing
@@ -82,5 +92,4 @@ end
 #     # 1. Find all the feed and product streams. We need to assign nodes to them for the diagram, olr they won't get rendered
 #     # 2. Iterate through the blocks and add them to the 
     
-#     for i in fs.order
-#         u = fs.unitops[i]
+#     inlets, outlets = boundarystreams()
