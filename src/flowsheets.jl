@@ -174,7 +174,7 @@ function generateBFD(fs::Flowsheet)
         end
     end
 
-    mermaidlines = "%%{init: {'securityLevel': 'loose', 'theme': 'default', 'themeVariables': { 'fontSize': '14'}}}%%\ngraph LR\n"
+    mermaidlines = "%%{init: {'securityLevel': 'loose', 'theme': 'base', 'themeVariables': { 'fontSize': '14', 'darkMode': 'true', 'primaryColor': '#1e90ff', 'lineColor': '#1e90ff'}}}%%\ngraph LR\n"
     for stream in streams
         if stream[1] == " " # Feed stream
             mermaidline = "$(stream[2])([ ]) -->|$(stream[2])| $(stream[3])[$(stream[3])]"
