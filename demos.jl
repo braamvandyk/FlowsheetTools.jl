@@ -249,4 +249,4 @@ sysstreams["Dummy"] = sysstreams["H2"] + sysstreams["C2"]
 sysstreams["Dummy"].massflows == sysstreams["Mixed"].massflows
 sysstreams["Dummy"].atomflows == sysstreams["Mixed"].atomflows
 
-generateBFD(fs)
+generateBFD(fs, "./myflowsheet.svg")

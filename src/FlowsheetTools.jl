@@ -11,7 +11,7 @@ export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomp
         Flowsheet, addunitop!, setorder!, generateBFD
 
 
-using JSON3, MacroTools, Optim, StructTypes, Statistics, Dates, DelimitedFiles, PrettyTables, Kroki
+using JSON3, MacroTools, Optim, StructTypes, Statistics, Dates, DelimitedFiles, PrettyTables, Base64, Downloads
 import Base.setindex!
 import Base.getindex
 import Base.length

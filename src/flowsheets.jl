@@ -88,7 +88,7 @@ function setorder!(fs::Flowsheet, neworder)
 end
 
 
-function generateBFD(fs::Flowsheet)
+function generateBFD(fs::Flowsheet, filename = nothing)
 #=
     Assign each unit op an id = its name (without whitespace)    
     
@@ -175,6 +175,7 @@ function generateBFD(fs::Flowsheet)
     end
 
     mermaidlines = "%%{init: {'securityLevel': 'loose', 'theme': 'base', 'themeVariables': { 'fontSize': '14', 'darkMode': 'true', 'primaryColor': '#1e90ff', 'lineColor': '#1e90ff'}}}%%\ngraph LR\n"
+    # mermaidlines = "{'fontSize': '14', 'darkMode': 'true', 'primaryColor': '#1e90ff', 'lineColor': '#1e90ff'}}}%%\ngraph LR\n"    
     for stream in streams
         if stream[1] == " " # Feed stream
             mermaidline = "$(stream[2])([ ]) -->|$(stream[2])| $(stream[3])[$(stream[3])]"
@@ -187,6 +188,49 @@ function generateBFD(fs::Flowsheet)
         mermaidlines *= "$mermaidline\n"
     end
 
-    return Diagram(:mermaid, mermaidlines)
+    # To generate the Mermaid diagram, encode the instructions in base 64,
+    # generate a url and download the file from mermaid.ink.
 
+    # First check the file extension, if filename specified
+    if !isnothing(filename)
+        name, ext = splitext(filename)
+        ext = lowercase(ext[2:end])
+        if ext ∉ ["svg", "png"]
+            error("Can only generate .svg or .png files.")
+        end
+        (ext == "png") && (ext = "img")
+    else
+        ext = "svg"
+    end
+    
+    io = IOBuffer()
+    iob64_encode = Base64EncodePipe(io)
+    write(iob64_encode, mermaidlines)
+    close(iob64_encode)
+    mmstr = String(take!(io))
+    mmurl = "http://mermaid.ink/" * ext * "/" * mmstr
+    
+    if !isnothing(filename)
+        Downloads.download(mmurl, filename)
+    else
+        filename = Downloads.download(mmurl)
+    end
+
+    if ext == "svg"
+        f = open(filename, "r")
+        img = read(f, String)
+        close(f)
+        display("image/svg+xml", img)
+    else
+        f = open(filename, "r")
+        img = read(f)
+        close(f)
+        display("image/png", img)
+    end
+  
+    # Return the filename
+    return filename
 end
+
+
+
