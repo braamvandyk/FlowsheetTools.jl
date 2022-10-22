@@ -11,8 +11,6 @@ struct Component
     counts
     Mr::Float64
 end
-StructTypes.StructType(::Type{Component}) = StructTypes.Struct()
-
 
 struct ComponentList
     list
@@ -142,12 +140,22 @@ end
 """
     function writecomp(filename, comp)
 
-Write a Component struct to a JSON file.
+Write a Component struct to a file.
 """
 function writecomponent(filename, comp)
-    filename = lowercase(filename)
+    str = "$(comp.name)\n"
+    str = str*string(length(comp.atoms))*"\n"
+    for atom in comp.atoms
+        str = str*atom*"\n"
+    end
+    for count in comp.counts
+        str = str*string(count)*"\n"
+    end
+    str = str*string(comp.Mr)
+    
+    filename = lowercase(filename)   
     open(filename, "w") do io
-        JSON3.pretty(io, comp)
+        write(io, str)
     end
 end
 
@@ -158,9 +166,26 @@ end
 Read a Component struct from a JSON file.
 """
 function readcomponent(filename::String)
-    open(filename, "r") do io
-        JSON3.read(io, Component)
+    f = open(filename, "r")
+    lines = readlines(f)
+    close(f)
+
+    name = lines[1]
+    count = parse(Int, lines[2])
+
+    atoms = Vector{String}(undef, count)
+    for i in 1:count
+        atoms[i] = lines[i+2]
     end
+
+    counts = Vector{Int}(undef, count)
+    for i in 1:count
+        counts[i] = parse(Int, lines[i+2+count])
+    end
+
+    Mr = parse(Float64, lines[end])
+
+    return Component(name, atoms, counts, Mr)
 end
 
 
@@ -177,7 +202,7 @@ function readcomponentlist!(complist::ComponentList, folder::String, filenames::
     available = readdir(folder)
     
     for fn in filenames
-        fname = fn * ".json"
+        fname = fn * ".comp"
         if lowercase(fname) in available
             complist[fn] = readcomponent(joinpath(folder, fname))
             count += 1

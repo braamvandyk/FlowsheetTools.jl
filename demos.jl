@@ -1,6 +1,7 @@
 using FlowsheetTools
 
 
+
 #-Components---------------------------
 
 
@@ -20,7 +21,9 @@ end "Ethane" syscomps
     H --> 4
 end "Ethylene" syscomps
 
-
+writecomponent(joinpath("components/", "Hydrogen.comp"), syscomps["Hydrogen"])
+writecomponent(joinpath("components/", "Ethane.comp"), syscomps["Ethane"])
+writecomponent(joinpath("components/", "Ethylene.comp"), syscomps["Ethylene"])
 #-Streams------------------------------
 
 
@@ -250,3 +253,5 @@ sysstreams["Dummy"].massflows == sysstreams["Mixed"].massflows
 sysstreams["Dummy"].atomflows == sysstreams["Mixed"].atomflows
 
 generateBFD(fs, "./myflowsheet.svg")
+
+
