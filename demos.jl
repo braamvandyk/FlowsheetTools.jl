@@ -253,5 +253,3 @@ sysstreams["Dummy"].massflows == sysstreams["Mixed"].massflows
 sysstreams["Dummy"].atomflows == sysstreams["Mixed"].atomflows
 
 generateBFD(fs, "./myflowsheet.svg")
-
-
