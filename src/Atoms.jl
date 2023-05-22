@@ -6,7 +6,7 @@ module Atoms
 
 using DelimitedFiles
 
-_rawatoms = readdlm(joinpath("atoms", "atoms.csv"), ',')
+_rawatoms = readdlm(joinpath(@__DIR__, "atoms", "atoms.csv"), ',')
 _atomnums = Int.(_rawatoms[:, 1])
 _atomsymbols = string.(_rawatoms[:, 2])
 _atomweights = Float64.(_rawatoms[:, 4])
