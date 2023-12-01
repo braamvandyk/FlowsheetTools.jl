@@ -7,142 +7,93 @@
 
 """
     conversion(b::BalanceBoundary, component::String)
-    conversion(b::BalanceBoundaryHistory, component::String)
 
 Calculate the fractional conversion of the component over the balance boundary
 """
 function conversion(b::BalanceBoundary, component::String)
     # Find the component in the feed
-    i = findfirst(x->x==component, b.total_in.comps)
-    if isnothing(i)
-        feed = 0.0
+    if component in keys(b.total_in.complist.list)
+        feeds = values(b.total_in.massflows[Symbol(component)])
     else
-        feed = b.total_in.massflows[i]
+        feeds = zeros(length(b.total_in.massflows))
     end
 
     # Find the component in the product
-    i = findfirst(x->x==component, b.total_out.comps)
-    if isnothing(i)
-        prod = 0
+    if component in keys(b.total_in.complist.list)
+        prods = values(b.total_out.massflows[Symbol(component)])
     else
-        prod = b.total_out.massflows[i]
+        prods = zeros(length(b.total_out.massflows))
     end
 
-    return feed > 0.0 ? (feed - prod)/feed : 0.0
-end
-
-
-function conversion(b::BalanceBoundaryHistory, component::String) 
-    # Find the component in the feed
-    i = findfirst(x->x==component, b.total_in.comps)
-    
-    # Conversion zero if nothing in the feed
-    if isnothing(i) 
-        results = zeros(b.total_in.numdata)
-        return results
+    conversions = zeros(length(b.total_in.massflows))
+    for (i, (feed, prod)) in enumerate(zip(feeds, prods))
+        if feed > 0.0
+            conversions[i] = (feed - prod)/feed
+        else
+            conversions[i] = 0.0
+        end
     end
 
-    # Find the component in the product
-    j = findfirst(x->x==component, b.total_out.comps)
-
-    # If nothing left in the product, then return ones
-    if isnothing(j)
-        results = ones(b.total_in.numdata)
-        return results
+    if length(conversions) == 1
+        return conversions[1]
+    else
+        timestamps = timestamp(b.total_in.massflows)
+        conversions_ta = TimeArray(timestamps, conversions, [Symbol("Conversion: " * component)])
+        return conversions_ta
     end
-    
-    # Create place to put the results.
-    results = zeros(b.total_in.numdata)
-
-    for datum = 1:b.total_in.numdata
-        feed = b.total_in.massflows[i, datum]
-        prod = b.total_out.massflows[j, datum]
-        results[datum] = feed > 0.0 ? (feed - prod)/feed : 0.0
-    end
-
-    return results
 end
 
 
 """
-    function selectivity(b, reactant, product)
-    function selectivity(b::BalanceBoundaryHistory, reactant::String, product::String)
+    function molar_selectivity(b, reactant, product)
 
 Calculate the molar selectivity of the converted reactant to the product, over the balance boundary (b).
 """
-function selectivity(b::BalanceBoundary, reactant::String, product::String)
+function molar_selectivity(b::BalanceBoundary, reactant::String, product::String)
     # Find the reactant inflow
-    i = findfirst(x->x==reactant, b.total_in.comps)
-    if isnothing(i)
-        return 0.0
+    if reactant in keys(b.total_in.complist.list)
+        r_ins = values(b.total_in.moleflows[Symbol(reactant)])
     else
-        r_in = b.total_in.moleflows[i]
+        r_ins = zeros(length(b.total_in.moleflows))
     end
 
     # Find the reactant outflow
-    i = findfirst(x->x==reactant, b.total_out.comps)
-    if isnothing(i)
-        r_out = 0.0
+    if reactant in keys(b.total_out.complist.list)
+        r_outs = values(b.total_out.moleflows[Symbol(reactant)])
     else
-        r_out = b.total_out.moleflows[i]
+        r_ins = zeros(length(b.total_out.moleflows))
     end
 
     # Find the product inflow
-    i = findfirst(x->x==product, b.total_in.comps)
-    if isnothing(i)
-        p_in = 0
+    if product in keys(b.total_in.complist.list)
+        p_ins = values(b.total_in.moleflows[Symbol(product)])
     else
-        p_in = b.total_in.moleflows[i]
+        p_ins = zeros(length(b.total_in.moleflows))
     end
 
     # Find the product outflow
-    i = findfirst(x->x==product, b.total_out.comps)
-    if isnothing(i)
-        p_out = 0.0
+    if product in keys(b.total_out.complist.list)
+        p_outs = values(b.total_out.moleflows[Symbol(product)])
     else
-        p_out = b.total_out.moleflows[i]
+        p_ins = zeros(length(b.total_out.moleflows))
     end
 
-    return r_in > 0.0 ? (p_out - p_in)/(r_in - r_out) : 0.0
-end
+    selectivities = zeros(length(b.total_in.massflows))
+    for (i, (r_in, r_out, p_in, p_out)) in enumerate(zip(r_ins, r_outs, p_ins, p_outs))
+        if r_in > 0.0
+            selectivities[i] = (p_out - p_in)/(r_in - r_out)
+        else
+            selectivities[i] = 0.0
+        end
+    end
 
-
-function selectivity(b::BalanceBoundaryHistory, reactant::String, product::String)
-    results = zeros(b.total_in.numdata)
-
-    # Find the reactant in the feed
-    i = findfirst(x->x==reactant, b.total_in.comps)
-    # Selectivity zero if nothing in the feed
-    isnothing(i) && (return results)
-    r_in = b.total_in.moleflows[i, :]
-    
-    # Find the reactant in the product
-    i = findfirst(x->x==reactant, b.total_out.comps)
-    if isnothing(i)
-        r_out = zeros(b.total_out.numdata)
+    if length(selectivities) == 1
+        return selectivities[1]
     else
-        r_out = b.total_out.moleflows[i, :]
+        timestamps = timestamp(b.total_in.massflows)
+        selectivities_ta = TimeArray(timestamps, selectivities, [Symbol("Molar selectivity: " * reactant * " -> " * product)])
+        return selectivities_ta
     end
 
-    # Find the product in the feed
-    i = findfirst(x->x==product, b.total_in.comps)
-    if isnothing(i)
-        p_in = zeros(b.total_in.numdata)
-    else
-        p_in = b.total_in.moleflows[i, :]
-    end
-    
-    # Find the product in the product
-    i = findfirst(x->x==product, b.total_out.comps)
-    if isnothing(i)
-        p_out = zeros(b.total_out.numdata)
-    else
-        p_out = b.total_out.moleflows[i, :]
-    end
-
-    for datum = 1:b.total_in.numdata
-        results[datum] = r_in[datum] > 0.0 ? (p_out[datum] - p_in[datum])/(r_in[datum] - r_out[datum]) : 0.0
-    end
-
-    return results
+    return selectivities
 end

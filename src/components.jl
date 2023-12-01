@@ -4,16 +4,15 @@
 # 
 #----------------------------------------------------------------------------
 
-
 struct Component
-    name
-    atoms
-    counts
+    name::String
+    atoms::Vector{String}
+    counts::Vector{Int}
     Mr::Float64
 end
 
 struct ComponentList
-    list
+    list::OrderedDict{String, Component}
 end
 
 
@@ -28,7 +27,7 @@ end
     Component(name, atoms, counts)
 
 Constructor for molecular species that defines the atomic make-up.
-It is recommended to rather use the @comp macro to create components.
+It is recommended to rather use the @comp macro to create components interactively
 """
 function Component(name, atoms, counts)
     Mr = 0.0
@@ -38,13 +37,14 @@ function Component(name, atoms, counts)
     return Component(name, atoms, counts, Mr)
 end
 
+
 """
     ComponentList()
 
 Constructor for an empty component list. Components are added when created via the @comp macro
 """
 function ComponentList()
-    l = Dict{String, Component}()
+    l = OrderedDict{String, Component}()
     return ComponentList(l)
 end
 
@@ -70,8 +70,21 @@ function Base.length(A::ComponentList)
     return length(A.list)
 end
 
+function Base.iterate(A::ComponentList)
+    return iterate(A.list)
+end
 
-# Pretty printing for component objects
+function Base.iterate(A::ComponentList, state)
+    return iterate(A.list, state)
+end
+
+#----------------------------------------------------------------------------
+#
+#----Pretty Printing---------------------------------------------------------
+#
+#----------------------------------------------------------------------------
+
+
 function Base.show(io::IO, c::Component)
     println(io, "Component: $(c.name)\n")
     println(io, "  Atom\t\tCount")
@@ -210,4 +223,14 @@ function readcomponentlist!(complist::ComponentList, folder::String, filenames::
     end
 
     return count
+end
+
+
+"""
+    names(complist::ComponentList)
+
+Return the list of names of components in the ComponenList.
+"""
+function names(complist::ComponentList)
+    return collect(keys(complist.list))
 end

@@ -1,33 +1,40 @@
-using FlowsheetTools
-
+using FlowsheetTools, Statistics
 
 
 #-Components---------------------------
 
+# We need a ComponentList to hold all the
+# components, so we know where to find them later
 
 syscomps = ComponentList()
 
-@comp begin
-    H --> 2
-end "Hydrogen" syscomps
+
+# You can read them from a folder with saved components
+count = readcomponentlist!(syscomps, "components", ["Ethylene", "Ethane", "Hydrogen"])
+
+# Or define them directly
 
 @comp begin
-    C --> 2
-    H --> 6
-end "Ethane" syscomps
+    N --> 2
+end "Nitrogen" syscomps
 
-@comp begin
-    C --> 2
-    H --> 4
-end "Ethylene" syscomps
+# And then save them to file
 
-writecomponent(joinpath("components/", "Hydrogen.comp"), syscomps["Hydrogen"])
-writecomponent(joinpath("components/", "Ethane.comp"), syscomps["Ethane"])
-writecomponent(joinpath("components/", "Ethylene.comp"), syscomps["Ethylene"])
+writecomponent(joinpath("components/", "Nitrogen.comp"), syscomps["Nitrogen"])
+
+
 #-Streams------------------------------
 
+#  Like for the components, we need a container for streams
+#  so we have something to iterate through later
 
 sysstreams = StreamList()
+
+# You can create the streams directly with instantaneous flows
+# This can be in either mass or molar unitops
+# The units are not specified - if you assume the mass flows are
+# in kg/h, then the molar equivalent is kmol/hr, but this could
+#  as easily be lb/week and lbmole/week.
 
 @stream mass begin
     "Ethylene" --> 2.8053
@@ -36,54 +43,83 @@ sysstreams = StreamList()
 end "Test" syscomps sysstreams
 
 @stream mole begin 
-    "Ethylene" --> 0.1
     "Ethane" --> 0.9
     "Hydrogen" --> 1.1
+    "Ethylene" --> 0.1
 end "Product" syscomps sysstreams
 
-sysstreams["Test"].moleflows ≈ sysstreams["Product"].moleflows
+# One stream was specified as mass flows, the other as mass flows,
+# but these streams are the same and the missing flows are calculated
+# automatically
+
+sysstreams["Test"].moleflows .≈ sysstreams["Product"].moleflows
+
+# As are the atomic flows, in the same units as the molar flows
+
+all(getindex.(values(sysstreams["Test"].atomflows), "C") .== getindex.(values(sysstreams["Product"].atomflows), "C"))
+all(getindex.(values(sysstreams["Test"].atomflows), "H") .== getindex.(values(sysstreams["Product"].atomflows), "H"))
+
+#  When we want to deal with streams with multiple historic data points,
+#  the best option is to use readstreamhistory to read them from file
+
+sysstreams = StreamList() # Create a new container and dump the previous streams
+sysstreams["Feed"] = readstreamhistory(joinpath("streamhistories", "FeedStream.csv"), "Feed", syscomps; ismoleflow=true)
+sysstreams["Product"] = readstreamhistory(joinpath("streamhistories", "ProdStream.csv"), "Product", syscomps; ismoleflow=true)
+
+# In the files, we had data for Ethylene, Ethane and Hydrogen, but our list of
+# components also includes nitrogen. Zero flows are automatically added for any
+# components not in the file, so all streams contain all the components.
+# We can also add components after reading the files, but then we need to 
+# call refreshcomplist(streamlist) to add the zero flows to all the new components
+# to existing streams.
+
+@comp begin
+    Ar --> 1
+end "Argon" syscomps
+
+refreshcomplist(sysstreams)
+
+sysstreams["Feed"]
+
+
+# ================================
+
 
 # Manipulate some streams
 
-# Copy and copy with multiply
-copystream!(sysstreams, "Product", "mystream")
-copystream!(sysstreams, "Product", "mystream2"; factor=2.0) # double the flow!
-
-sysstreams["mystream2"].totalmassflow ≈ 2.0 * sysstreams["mystream"].totalmassflow
-
-# Different name, so not identical
-sysstreams["Product"] == sysstreams["mystream"]
-
-# But all the flows are the same
-sysstreams["Product"].atomflows == sysstreams["mystream"].atomflows
-
-# Do some more things with streams
-renamestream!(sysstreams, "mystream", "dummy")
-deletestream!(sysstreams, "dummy")
-
 # Multiplication with a scalar
 sysstreams["Prod2"] = 2.0*sysstreams["Product"]
-sysstreams["Prod2"].totalmassflow ≈ 2.0 * sysstreams["Product"].totalmassflow
+
+# Note the use of .≈ and .* - internally the data are stored in TimeArrays (TimeSeries.jl)
+# and only the braodcasted operators are used on TimeArrays. Comparing to TimeArrays also
+# returns a TimeArray and we extract the values using values() to get a BitVector
+all(values(sysstreams["Prod2"].totalmassflow) .≈ values(2.0 .* sysstreams["Product"].totalmassflow))
+
+# Copy and copy with multiply
+copystream!(sysstreams, "Product", "MyStream")
+copystream!(sysstreams, "Product", "MyStream2"; factor=2.0) # double the flow!
+
+# Check that they are identical
+all(values(sysstreams["MyStream2"].totalmassflow .≈ 2.0 .* sysstreams["MyStream"].totalmassflow))
+
+# Different name, so not identical
+sysstreams["Product"] == sysstreams["MyStream"]
+
+# But all the flows are the same
+all(getindex.(values(sysstreams["Product"].atomflows), "C") .== getindex.(values(sysstreams["MyStream"].atomflows), "C"))
+all(getindex.(values(sysstreams["Product"].atomflows), "H") .== getindex.(values(sysstreams["MyStream"].atomflows), "H"))
+all(getindex.(values(sysstreams["Product"].atomflows), "N") .== getindex.(values(sysstreams["MyStream"].atomflows), "N"))
+
+# Do some more things with streams
+renamestream!(sysstreams, "MyStream", "Dummy")
+deletestream!(sysstreams, "Dummy")
 
 
 #-UnitOps, Boundaries and KPIs---------
 
-
 # Test unit ops and mass balance boundaries
 # Define some streams
 sysstreams = StreamList()
-
-@stream mole begin
-    "Ethylene" --> 1.0
-    "Hydrogen" --> 2.0
-end "Feed" syscomps sysstreams
-
-@stream mole begin
-    "Ethylene" --> 0.1
-    "Ethane" --> 0.9
-    "Hydrogen" --> 1.1
-end "Product" syscomps sysstreams
-
 
 @stream mole begin
     "Hydrogen" --> 1.1
@@ -94,22 +130,17 @@ end "H2" syscomps sysstreams
     "Ethane" --> 0.9
 end "C2" syscomps sysstreams
 
+sysstreams["Mixed"] = emptystream(sysstreams, "Mixed")
+
 @stream mole begin
-    "Hydrogen" --> 0.0
-end "Mixed" syscomps sysstreams
+    "Ethylene" --> 0.0
+    "Ethane" --> 1.0
+    "Hydrogen" --> 1.0
+end "Product" syscomps sysstreams
+
 
 # Define some unit ops
 sysunitops = UnitOpList()
-
-@unitop begin
-    inlets --> ["Feed"]
-    outlets --> ["Product"]
-end "Reactor" sysstreams sysunitops
-
-@unitop begin
-    inlets --> ["Product"]
-    outlets --> ["C2", "H2"]
-end "Membrane" sysstreams sysunitops
 
 @unitop begin
     inlets --> ["H2", "C2"]
@@ -118,9 +149,14 @@ end "Membrane" sysstreams sysunitops
 end "Mixer" sysstreams sysunitops
 sysunitops["Mixer"]()
 
+@unitop begin
+    inlets --> ["Mixed"]
+    outlets --> ["Product"]
+end "Reactor" sysstreams sysunitops
+
 # Define a mass balance boundary
 @boundary begin
-    unitops --> ["Reactor", "Membrane"]
+    unitops --> ["Mixer", "Reactor"]
 end b sysunitops
 
 # Check the closures
@@ -132,124 +168,95 @@ b.total_out.totalmassflow
 # And some defined KPIs
 conversion(b, "Ethane")
 conversion(b, "Ethylene")
-selectivity(b, "Ethylene", "Ethane")
+conversion(b, "Hydrogen")
+molar_selectivity(b, "Ethylene", "Ethane")
 
-# Now test the reconciliations
-# Change some flows to simulate measurement errors
-copystream!(sysstreams, "Feed", "Feed2"; factor=0.95)
-copystream!(sysstreams, "Product", "Prod2"; factor=1.01)
+# Let's do the same with some history attached to the streams
 
-# Define the unit ops and boundary
-@unitop begin
-    inlets --> ["Feed2"]
-    outlets --> ["Prod2"]
-end "Reactor2" sysstreams sysunitops
+sysstreams = StreamList() # Create a new container and dump the previous streams
+sysstreams["C2"] = readstreamhistory(joinpath("streamhistories", "C2.csv"), "C2", syscomps; ismoleflow=true)
+sysstreams["H2"] = readstreamhistory(joinpath("streamhistories", "Hydrogen.csv"), "H2", syscomps; ismoleflow=true)
+sysstreams["Product"] = readstreamhistory(joinpath("streamhistories", "Product.csv"), "Product", syscomps; ismoleflow=true)
+sysstreams["Mixed"] = emptystream(sysstreams, "Mixed")
 
-@unitop begin
-    inlets --> ["Prod2"]
-    outlets --> ["C2", "H2"]
-end "Membrane2" sysstreams sysunitops
-
-@boundary begin
-    unitops --> ["Reactor2", "Membrane2"]
-end b2 sysunitops
-
-# Get the correction factors on the inlets and outlets
-corrections = calccorrections(b2)
-b2 = closemb(b2)
-b2
-
-# Test the pretty printing
-print(syscomps["Ethane"])
-print(sysstreams["Feed"])
-print(sysunitops["Membrane"])
-print(b)
-
-# Read in a list of components
-syscomps2 = ComponentList()
-count = readcomponentlist!(syscomps2, "components", ["Ethylene", "Ethane", "Hydrogen"])
-count == 3
-
-
-#-Streams with historical data---------
-
-
-histstreams = StreamHistoryList()
-# Read in some stream histories
-histstreams["Feed"] = readstreamhistory(joinpath("streamhistories", "FeedStream.csv"), "Feed", syscomps; ismoleflow=true)
-histstreams["Product"] = readstreamhistory(joinpath("streamhistories", "ProdStream.csv"), "Product", syscomps; ismoleflow=true)
-histstreams
-# And mix them
-histstreams["Comb"] = histstreams["Feed"] + histstreams["Product"]
-
-feeddata = showdata(histstreams["Feed"]);
-println(feeddata)
-# And scale the result
-histstreams["Comb2"] = 2.0 * histstreams["Comb"]
-
-
-#-UnitOps etc with historical data-----
-
-# Test UnitOpHistory
-histops = UnitOpHistoryList()
-
-@unitophist begin
-    inlets --> ["Feed", "Product"]
-    outlets --> ["Comb2"]
-    calc --> mixer!
-end "Mixer" histstreams histops
-histops["Mixer"]()
-
-histstreams["Comb"].massflows == histstreams["Comb2"].massflows
-histstreams["Comb"].comps == histstreams["Comb2"].comps
-histstreams["Comb"].timestamps == histstreams["Comb2"].timestamps
-
-
-# Test BalanceBoundaryHistory
-@unitophist begin
-    inlets --> ["Feed"]
-    outlets --> ["Product"]
-end "RX101" histstreams histops
-
-@boundaryhist begin
-    unitops --> ["RX101"]
-end bh histops
-
-corrections = calccorrections(bh)
-bh = closemb(bh)
-conversion(bh, "Ethylene")
-selectivity(bh, "Ethylene", "Ethane")
-
-print(showdata(bh))
-
-
-# Test Flowsheet
-
+# Define some unit ops
 sysunitops = UnitOpList()
-
-@unitop begin
-    inlets --> ["Feed"]
-    outlets --> ["Product"]
-end "Reactor" sysstreams sysunitops
-
-@unitop begin
-    inlets --> ["Product"]
-    outlets --> ["C2", "H2"]
-end "Membrane" sysstreams sysunitops
 
 @unitop begin
     inlets --> ["H2", "C2"]
     outlets --> ["Mixed"]
     calc --> mixer!
 end "Mixer" sysstreams sysunitops
+sysunitops["Mixer"]()
 
+@unitop begin
+    inlets --> ["Mixed"]
+    outlets --> ["Product"]
+end "Reactor" sysstreams sysunitops
+
+# Define a mass balance boundary
+@boundary begin
+    unitops --> ["Mixer", "Reactor"]
+end b sysunitops
+
+# Check the closures
+b.atomclosures
+b.closure
+b.total_in.totalmassflow
+b.total_out.totalmassflow
+
+# And some defined KPIs
+c1 = conversion(b, "Ethane")
+c2 = conversion(b, "Ethylene")
+sc2 = molar_selectivity(b, "Ethylene", "Ethane")
+
+mean(values(c1))
+mean(values(c2))
+mean(values(sc2))
+
+
+# Lets introduce some errors and check our closure corrections
+
+copystream!(sysstreams, "C2", "eC2", factor = 1.05)
+copystream!(sysstreams, "H2", "eH2", factor = 0.95)
+copystream!(sysstreams, "Product", "eProduct")
+sysstreams["eMixed"] = emptystream(sysstreams, "eMixed")
+
+
+# Define the unit ops and boundary
+@unitop begin
+    inlets --> ["eH2", "eC2"]
+    outlets --> ["eMixed"]
+    calc --> mixer!
+end "eMixer" sysstreams sysunitops
+sysunitops["eMixer"]()
+
+@unitop begin
+    inlets --> ["eMixed"]
+    outlets --> ["eProduct"]
+end "eReactor" sysstreams sysunitops
+
+# Define a mass balance boundary
+@boundary begin
+    unitops --> ["eMixer", "eReactor"]
+end b sysunitops
+
+
+# Get the correction factors on the inlets and outlets
+corrections = calccorrections(b, "eProduct")
+b2 = closemb(b, anchor = "eProduct")
+sysunitops["eMixer"]()
+
+mean(values(b.closure))
+mean(values(b2.closure))
+
+print(showdata(b2))
+
+
+# Test Flowsheet
 
 fs = Flowsheet(sysunitops, ["Reactor"], [1])
-addunitop!(fs, ["Membrane", "Mixer"])
+addunitop!(fs, ["Mixer"])
 fs()
-
-sysstreams["Dummy"] = sysstreams["H2"] + sysstreams["C2"]
-sysstreams["Dummy"].massflows == sysstreams["Mixed"].massflows
-sysstreams["Dummy"].atomflows == sysstreams["Mixed"].atomflows
 
 generateBFD(fs, "./myflowsheet.svg")

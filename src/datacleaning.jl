@@ -1,7 +1,7 @@
-using Dates, Loess, Interpolations, Missings, TimeSeries
+# using Dates, Loess, Interpolations, Missings, TimeSeries
 
-# These are used only during testing
-using Plots, Distributions
+# # These are used only during testing
+# using Plots, Distributions
 
 """
     calcHoL(timestamps)
@@ -17,22 +17,22 @@ end
 
 
 # Generate dummy data for testing
-function gendata(timestamps, period, fracfilled)
-    HoL = calcHoL(timestamps)
-    data = zeros(Union{Float64, Missing}, length(times))
+# function gendata(timestamps, period, fracfilled)
+#     HoL = calcHoL(timestamps)
+#     data = zeros(Union{Float64, Missing}, length(times))
 
-    for i in eachindex(HoL)
-        if rand() > fracfilled
-            data[i] = missing
-        else
-            data[i] = sin(π*period*(HoL[i]/(Hour(endtime - starttime)/Hour(1))))
-            norm = Normal(0, 0.1*abs(data[i]))
-            data[i] += rand(norm)
-        end
-    end
+#     for i in eachindex(HoL)
+#         if rand() > fracfilled
+#             data[i] = missing
+#         else
+#             data[i] = sin(π*period*(HoL[i]/(Hour(endtime - starttime)/Hour(1))))
+#             norm = Normal(0, 0.1*abs(data[i]))
+#             data[i] += rand(norm)
+#         end
+#     end
 
-    return data
-end
+#     return data
+# end
 
 """
     smooth_and_fill(raw; loessspan=0.3, suggest_start=false, startval=0.0, suggest_end=false, endval=0.0)
@@ -79,15 +79,15 @@ function smooth_and_fill(raw; loessspan=0.3, suggest_start=false, startvals=Floa
 end
 
 
-# Generate dummy data with missing values
-starttime = DateTime(2023, 1, 1, 0, 0)
-endtime = DateTime(2023, 1, 12, 24, 0)
-times = starttime:Hour(6):endtime
+# # Generate dummy data with missing values
+# starttime = DateTime(2023, 1, 1, 0, 0)
+# endtime = DateTime(2023, 1, 12, 24, 0)
+# times = starttime:Hour(6):endtime
 
-raw = TimeArray(times, [gendata(times, 2, 0.95) gendata(times, 2, 0.95)], [:raw1, :raw2])
-plot(raw, leg=:bottomleft)
+# raw = TimeArray(times, [gendata(times, 2, 0.95) gendata(times, 2, 0.95)], [:raw1, :raw2])
+# plot(raw, leg=:bottomleft)
 
-sf1 = smooth_and_fill(raw, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
-sf2 = smooth_and_fill(raw)
-plot!(sf1)
-plot!(sf2)
+# sf1 = smooth_and_fill(raw, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
+# sf2 = smooth_and_fill(raw)
+# plot!(sf1)
+# plot!(sf2)
