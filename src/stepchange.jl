@@ -1,3 +1,5 @@
+# TODO Kill this code and replace with ChangePointDetection.changepoints(ts; threshold = 0.5, window = 150)...
+
 """
     function findsteps(data)
 

@@ -8,12 +8,13 @@ struct Flowsheet
     unitlist::UnitOpList
     units::Vector{String}
 
-    order::Vector{Int}
+    execution_order::Vector{Int}
 end
+
 
 function (fs::Flowsheet)(neworder = nothing)
     if isnothing(neworder)
-        for i in fs.order
+        for i in fs.execution_order
             fs.unitlist[fs.units[i]]()
         end
     else
@@ -29,6 +30,28 @@ end
 
 #----------------------------------------------------------------------------
 # 
+#----Base overloads----------------------------------------------------------
+# 
+#----------------------------------------------------------------------------
+
+
+function Base.show(io::IO, fs::Flowsheet)
+    d = OrderedDict{Int, String}()
+    for i in 1:length(fs.execution_order)
+        d[fs.execution_order[i]] = fs.units[i]
+    end
+    sort!(d)
+
+    println(io, "Flowsheet:")
+    println(io)
+    println(io, "Execution Order:")
+    for (k, v) in d
+        println(k, "  ", v)
+    end
+end
+
+#----------------------------------------------------------------------------
+# 
 #----Utilities---------------------------------------------------------------
 # 
 #----------------------------------------------------------------------------
@@ -37,7 +60,7 @@ end
 function addunitop!(fs::Flowsheet, u::String)
     if haskey(fs.unitlist.list, u)
         push!(fs.units, u)
-        push!(fs.order, length(fs.order) + 1)
+        push!(fs.execution_order, length(fs.execution_order) + 1)
     else
         error("unitop $u not defined in list $(fs.unitlist)")
     end
@@ -50,7 +73,7 @@ function addunitop!(fs::Flowsheet, us::Vector{String})
     for u in us
         if haskey(fs.unitlist.list, u)
             push!(fs.units, u)
-            push!(fs.order, length(fs.order) + 1)
+            push!(fs.execution_order, length(fs.execution_order) + 1)
         else
             error("unitop $u not defined in list $(fs.unitlist)")
         end
@@ -61,26 +84,26 @@ end
 
 
 function setorder!(fs::Flowsheet, neworder)
-    numold = length(fs.order)
+    numold = length(fs.execution_order)
     numnew = length(neworder)
 
     if numold == numnew
         for i in 1:numold
-            fs.order[i] = neworder[i]
+            fs.execution_order[i] = neworder[i]
         end
     elseif numold < numnew
         for i in 1:numold
-            fs.order[i] = neworder[i]
+            fs.execution_order[i] = neworder[i]
         end            
         for j = 1:(numnew - numold)
-            push!(fs.order, neworder[numold+j])
+            push!(fs.execution_order, neworder[numold+j])
         end
     else
         for i in 1:numold
-            fs.order[i] = neworder[i]
+            fs.execution_order[i] = neworder[i]
         end            
         for j = 1:(numold - numnew)
-            pop!(fs.order)
+            pop!(fs.execution_order)
         end
     end
 

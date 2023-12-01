@@ -1,3 +1,5 @@
+# TODO Add uncertainty / variance to each stream for various flows
+
 #----------------------------------------------------------------------------
 #
 #----Definitions-------------------------------------------------------------
@@ -8,47 +10,21 @@
 struct Stream
     name::String
 
-    complist::ComponentList
-    comps::Vector{String}
-
-    # Specifiy mass flows, calculate mole flows
-    massflows::Vector{Float64}
-    moleflows::Vector{Float64}
-    totalmassflow::Float64
-
-    # Molar flow of atoms, calculated from above
-    atomflows::Dict{String, Float64}
-end
-
-
-struct StreamHistory
-    name::String
-
     # Number of historic data points
     numdata::Integer
     
     complist::ComponentList
-    comps::Vector{String}
-
-    timestamps::Vector{DateTime}
     
-    # Specifiy mass flows, calculate mole flows
-    massflows::Matrix{Float64}
-    moleflows::Matrix{Float64}
-    totalmassflow::Vector{Float64}
-
-    # Molar flow of atoms, calculated from above
-    atomflows::Vector{Dict{String, Float64}}
+    # Flow data, mass, molar and atoms
+    massflows::TimeArray
+    moleflows::TimeArray
+    totalmassflow::TimeArray
+    atomflows::TimeArray
 end
 
 
 struct StreamList
-    list
-end
-
-
-struct StreamHistoryList
-    list
+    list::OrderedDict{String, Stream}
 end
 
 
@@ -60,237 +36,113 @@ end
 
 
 """
-    function Stream(name, complist, comps, flows, ismoleflow=false)
-
-Constructor for a stream that defines the stream name and component flows.
-The mass flows are specified and a molar composition and atomic molar flows calculated.
-
-It is recommeded to rather use the @stream macro to create streams.
-"""
-function Stream(name, complist, comps, flows, ismoleflow=false)
-    numcomps = length(comps)
-    
-    length(flows) != numcomps && error("mismatch between number of components and available data.")
-
-    massflows = zeros(numcomps)
-    moleflows = zeros(numcomps)
-
-    atomflows = Dict{String, Float64}()
-    totalmassflow = 0.0
-    
-
-    for (i, compname) in enumerate(comps)
-        comp = complist[compname]
-
-        if !ismoleflow
-            massflows[i] = flows[i]
-            moleflows[i] = massflows[i]/comp.Mr
-        else
-            moleflows[i] = flows[i]
-            massflows[i] = moleflows[i]*comp.Mr
-        end
-            
-        totalmassflow += massflows[i]
-            
-        for (j, atom) in enumerate(comp.atoms)
-            if atom in keys(atomflows)
-                atomflows[atom] += moleflows[i]*comp.counts[j]
-            else
-                atomflows[atom] = moleflows[i]*comp.counts[j]
-            end
-        end
-
-    end
-
-    return Stream(name, complist, comps, massflows, moleflows, totalmassflow, atomflows)
-end
-
-
-"""
-    function StreamHistory(name, complist, comps, timestamps, flowshistory, ismoleflow=false)
+    function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
 
 Constructor for a stream history object that defines the stream name and component flows
 for various past measurements.
-The mass flows are specified and a molar composition and atomic molar flows calculated.
-The mass flow history is passed as a matrix where each column is a datum
 
-It is recommended to rather create StreamHistory objects via readstreamhistory(filename, streamname, complist).
+The mass flows are specified and molar flows and atomic molar flows calculated
+    OR
+The mole flows are specified and mass flows and atomic molar flows calculated
+
+The flow data is passed as a matrix where each column represents a component. Internally, 
+flows for all the components in the specified component list is stored, but only a sublist
+need be specified in the constructor. Other components are assigned zero flows. This is to
+expidite the addition of streams using the internal TimeArray objects.
+
+It is recommended to rather create StreamHistory objects via readstreamhistory().
 """
-function StreamHistory(name, complist, comps, timestamps, flowshistory, ismoleflow=false)
+function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
     numcomps = length(comps)
-    numdata = size(flowshistory, 2)
+    numdata = size(flowdata, 1)
 
-    size(flowshistory, 1) != numcomps && error("mismatch between number of components and available data.")
-    length(timestamps) != numdata && error("length mismatch between data and timestamps.")
-
-    massflowshistory = zeros(numcomps, numdata)
-    moleflowshistory = zeros(numcomps, numdata)
-
-    atomflowshistory = Vector{Dict{String, Float64}}(undef, numdata)
-    totalmassflowhistory = zeros(numdata)
     
-    for datum in 1:numdata
-        atomflows = Dict{String, Float64}()
+    # Sanity checks on the data
+    size(flowdata, 2) != numcomps && error("mismatch between number of components and available data.")
+    length(timestamps) != numdata && error("length mismatch between data and timestamps.")
+    
+    # Build the TimeArrays
+    allcomps = names(complist) # Also those not present in the stream
+    massflows = zeros(numdata, length(allcomps))
+    moleflows = zeros(numdata, length(allcomps))
 
-        for (i, compname) in enumerate(comps)
-            comp = complist[compname]
-
-            if !ismoleflow
-                massflowshistory[i, datum] = flowshistory[i, datum]
-                moleflowshistory[i, datum] = flowshistory[i, datum]/comp.Mr
-            else
-                moleflowshistory[i, datum] = flowshistory[i, datum]
-                massflowshistory[i, datum] = flowshistory[i, datum]*comp.Mr
-            end
-
-            totalmassflowhistory[datum] += massflowshistory[i, datum]
-            
-            for (j, atom) in enumerate(comp.atoms)
-                if atom in keys(atomflows)
-                    atomflows[atom] += moleflowshistory[i, datum]*comp.counts[j]
-                else
-                    atomflows[atom] = moleflowshistory[i, datum]*comp.counts[j]
-                end
+    # Collect the atoms to create a blank dictionary - all values are zero
+    # This Dict only carries atoms actually present in the stream
+    # When adding streams, this list is recreated from the new list of components
+    emptyatomflows = Dict{String, Float64}()
+    for compname in allcomps
+        comp = complist[compname]
+        for atom in comp.atoms
+            if atom ∉ keys(emptyatomflows)
+                emptyatomflows[atom] = 0.0
             end
         end
-        atomflowshistory[datum] = atomflows
+    end
+    
+
+    atomflows = Vector{Dict{String, Float64}}(undef, numdata)
+    totalmassflows = zeros(numdata)
+    
+    for datum in 1:numdata
+        # Get a copy of the empty atomic flows list
+        _atomflows = deepcopy(emptyatomflows)
+
+        # Here we loop through all the components in the complist and
+        # use zeros when they are not present
+        for (i, compname) in enumerate(allcomps)
+            if compname in comps
+                comp = complist[compname]
+                idx = findfirst(x->x==compname, comps)
+
+                if !ismoleflow
+                    massflows[datum, i] = flowdata[datum, idx]
+                    moleflows[datum, i] = flowdata[datum, idx]/comp.Mr
+                else
+                    moleflows[datum, i] = flowdata[datum, idx]
+                    massflows[datum, i] = flowdata[datum, idx]*comp.Mr
+                end
+
+                totalmassflows[datum] += massflows[datum, i]
+                
+                for (j, atom) in enumerate(comp.atoms)
+                    _atomflows[atom] += moleflows[datum, i]*comp.counts[j]
+                end
+            else
+                massflows[datum, i] = 0.0
+                moleflows[datum, i] = 0.0
+            end
+        end
+        atomflows[datum] = _atomflows
     end
 
-    return StreamHistory(name, numdata, complist, comps, timestamps, massflowshistory, moleflowshistory,
-                         totalmassflowhistory, atomflowshistory)
+    massflows_ta = TimeArray(timestamps, massflows, allcomps)
+    moleflows_ta = TimeArray(timestamps, moleflows, allcomps)
+    totalmassflows_ta = TimeArray(timestamps, totalmassflows, [:totalmassflows])
+    atomflows_ta = TimeArray(timestamps, atomflows, [:atomflows])
+    
+
+    return Stream(name, numdata, complist, massflows_ta, moleflows_ta, totalmassflows_ta, atomflows_ta)
 end
+
 
 
 """
     Streamlist()
 
-Constructor for an empty stream list. Streams are added when created via the @stream macro
+Constructor for an empty stream list. Streams are added when created via the @stream macro or
+when read from file with readstreamhistory()
 """
 function StreamList()
-    l = Dict{String, Stream}()
+    l = OrderedDict{String, Stream}()
     return StreamList(l)
 end
 
-
-"""
-    StreamHistorylist()
-
-Constructor for an empty stream list with historical data. Streams are added when read from file with readstreamhistory().
-"""
-function StreamHistoryList()
-    l = Dict{String, StreamHistory}()
-    return StreamHistoryList(l)
-end
 
 #----------------------------------------------------------------------------
 # 
 #----Base overloads----------------------------------------------------------
 # 
 #----------------------------------------------------------------------------
-
-
-"""
-    Base.:+(a::Stream, b::Stream)
-
-Extend the addition operator to add to streams to each other - a mixer.
-It is assumed that the streams will have different components in arbitrary order.
-"""
-function Base.:+(a::Stream, b::Stream)
-    # Make sure the streams use the same system components
-    a.complist != b.complist && error("cannot add streams with different system component lists")
-    
-    comps = copy(a.comps)
-    massflows = copy(a.massflows)
-
-    compmap = indexin(b.comps, comps)
-    for i in eachindex(b.comps)
-        if isnothing(compmap[i])
-            # Add the component
-            push!(comps, b.comps[i])
-            push!(massflows, b.massflows[i])
-        else
-            # Add the flow to the existing component
-            massflows[compmap[i]] += b.massflows[i]
-        end
-    end
-
-    return Stream(a.name * "+" * b.name, a.complist, comps, massflows)
-end
-
-
-"""
-    Base.+(a::StreamHistory, b::StreamHistory)
-
-Extend the addition operator to add to streams histories to each other - a mixer.
-It is assumed that the streams histories will have different components in arbitrary order.
-"""
-function Base.:+(a::StreamHistory, b::StreamHistory)
-    # Make sure the streams use the same system components
-    a.complist != b.complist && error("cannot add streams with different system component lists")
-
-    # Check that the data peridos are the same.
-    # The constructor already checks that the timestamp length matches the data length.
-    # We don't check the comps, as the streams could have different compositions, which we mix.
-    a.numdata != b.numdata && error("history length of a not identical to that of b")
-
-    # Check that the timestamps are identical!
-    for i in eachindex(a.timestamps)
-        a.timestamps[i] != b.timestamps[i] && error("timestamp values do not match at entry $i")
-    end
-
-    comps = copy(a.comps)
-    massflows = copy(a.massflows)
-
-    compmap = indexin(b.comps, comps)
-    for i in eachindex(b.comps)
-        if isnothing(compmap[i])
-            # Add the component
-            push!(comps, b.comps[i])
-            vcat(massflows, b.massflows[i, :]')
-        else
-            # Add the flow to the existing component
-            massflows[compmap[i], :] .+= b.massflows[i, :]
-        end
-    end
-
-    return StreamHistory(a.name * "+" * b.name, a.complist, comps, a.timestamps, massflows)
-end
-
-
-"""
-    Base.*(a::T, b::Stream) where T <: Real
-
-Extend the multiplication operator to scale a stream's flows by a scalar value.
-Used in mass balance reconciliations to apply flow corrections.
-"""
-function Base.:*(a::T, b::Stream) where T <: Real
-    return Stream(b.name, b.complist, b.comps, a .* b.massflows)
-end
-
-function Base.:*(b::Stream, a::T) where T <: Real
-    return Stream(b.name, b.complist, b.comps, a .* b.massflows)
-end
-
-"""
-    Base.*(a::T, b::StreamHistory) where T <: Real
-
-Extend the multiplication operator to scale a stream history's flows by a scalar value.
-Used in mass balance reconciliations to apply flow corrections.
-"""
-function Base.:*(a::T, b::StreamHistory) where T <: Real
-    return StreamHistory(b.name, b.complist, b.comps, b.timestamps, a .* b.massflows)
-end
-
-
-"""
-    Base.*(b::StreamHistory, a::T) where T <: Real
-
-Extend the multiplication operator to scale a stream history's flows by a scalar value.
-Used in mass balance reconciliations to apply flow corrections.
-"""
-function Base.:*(b::StreamHistory, a::T) where T <: Real
-    return StreamHistory(b.name, b.complist, b.comps, b.timestamps, a .* b.massflows)
-end
 
 
 function Base.setindex!(A::StreamList, X::Stream, idx::String)
@@ -302,7 +154,10 @@ function Base.setindex!(A::StreamList, X::Stream, idx::String)
         # We get the value entry using the `second` field of the `Pair`, which returns a `Stream`,
         # of which we get the `complist` field.
         currentlist = first(A.list).second.complist
+        current_ts = timestamp(first(A.list).second.massflows)
+
         X.complist != currentlist && error("all streams in StreamList must reference the same ComponentList")
+        !all(timestamp(X.massflows) .== current_ts) && error("all streams in StreamList must have the same timestamps")
 
         A.list[idx] = X
     end
@@ -330,106 +185,125 @@ function Base.length(A::StreamList)
 end
 
 
-function Base.setindex!(A::StreamHistoryList, X::StreamHistory, idx::String)
-    if length(A.list) == 0
-        A.list[idx] = X
-    else
-        # Verify that all the streams reference the same ComponentList.
-        # Get the first item in the `list` field. As `list` is a `Dict`, this returns a `Pair`.
-        # We get the value entry using the `second` field of the `Pair`, which returns a `StreamHistory`,
-        # of which we get the `complist` field.
-        currentlist = first(A.list).second.complist
-        X.complist != currentlist && error("all streams in StreamHistoryList must reference the same ComponentList")
+"""
+    Base.:+(a::Stream, b::Stream)
 
-        A.list[idx] = X
-    end
+Extend the addition operator to add to streams to each other - a mixer.
+All streams must refer to the same component list .
+"""
+function Base.:+(a::Stream, b::Stream)
+    # Make sure the streams use the same system components and timestamps 
+    # TimeArrays will add only matching timestamps, but this result in varying data lengths, which must be avoided
+    a.complist != b.complist && error("cannot add streams with different system component lists")
+    a.numdata != b.numdata && error("cannot add streams with different data lengths")
+    !all(timestamp(a.massflows) .== timestamp(b.massflows)) && error("cannot add streams with different timestamps")
+
+    comps = string.(colnames(a.massflows))
+    timestamps = timestamp(a.massflows)
+    flowdata = values(a.massflows .+ b.massflows)
+
+    
+    return Stream(a.name * "+" * b.name, a.complist, comps, timestamps, flowdata)
 end
 
 
-function Base.getindex(A::StreamHistoryList, idx::String)
-    return A.list[idx]
+"""
+    Base.*(a::T, b::Stream) where T <: Real
+
+Extend the multiplication operator to scale a stream's flows by a scalar value.
+Used in mass balance reconciliations to apply flow corrections.
+"""
+function Base.:*(a::T, b::Stream) where T <: Real
+    comps = string.(colnames(b.massflows))
+    timestamps = timestamp(b.massflows)
+    flowdata = values(a .* b.massflows)
+   
+    return Stream(b.name, b.complist, comps, timestamps, flowdata)
 end
 
 
-function Base.getindex(A::StreamHistoryList, idxs::Vector{String})
-    res = StreamHistory[]
-    for idx in idxs
-        push!(res, A.list[idx])
-    end
-    return res
-end
-
-
-function Base.length(A::StreamHistoryList)
-    return length(A.list)
+function Base.:*(b::Stream, a::T) where T <: Real
+    comps = string.(colnames(b.massflows))
+    timestamps = timestamp(b.massflows)
+    flowdata = values(a .* b.massflows)
+   
+    return Stream(b.name, b.complist, comps, timestamps, flowdata)
 end
 
 
 function  Base.copy(A::Stream)
-    return Stream(A.name, A.complist, A.comps, A.massflows, A.moleflows, A.totalmassflow, A.atomflows)
+    return deepcopy(A)
 end
 
 
-# Pretty printing for stream objects
-function Base.show(io::IO, s::Stream)
-    println(io, "Stream: ", s.name, "\nTotal mass flow: ", prettyround(s.totalmassflow), "\n")
-    println(io, "Component\tMass Flow\tMolar Flow")
-    println(io, "-"^42)
-
-    for (i, compname) in enumerate(s.comps)
-        comp = s.complist[compname]
-        println(io, " ", rpad(comp.name, 9), "\t", rpad(prettyround(s.massflows[i]), 9), "\t", prettyround(s.moleflows[i]))
-    end
-
+# # Pretty printing for stream objects
+function Base.show(io::IO, stream::Stream)
+    println(io, "Stream: $(stream.name)")
     println(io)
-    println(io, "Atom\t\tFlow")
-    println(io, "-"^20)
-    atoms = collect(keys(s.atomflows)) 
-    flows = collect(values(s.atomflows))
 
-    for i in eachindex(atoms)
-        println(io, " ", rpad(atoms[i],2), lpad(prettyround(flows[i]), 17))
+    if stream.numdata == 1
+        header = string.(colnames(stream.massflows))
+        pushfirst!(header, " ")
+        massflows = ["Mass flows " (values(stream.massflows))]
+        moleflows = ["Molar flows" (values(stream.moleflows))]
+        data = vcat(massflows, moleflows)
+        pretty_table(io, data, header = header)
+        println(io)
+        println(io, "Total mass flow: $(prettyround(values(stream.totalmassflow)[begin]))")
+        println(io)
+        pretty_table(io, values(stream.atomflows)[1], header = ["Atom", "Molar flow"])
+    else
+        println(io, "Mass flows:")
+        pretty_table(io, stream.massflows, display_size=(14, -1))
+        println(io)
+        println(io, "Molar flows:")
+        pretty_table(io, stream.moleflows, display_size=(14, -1))
+        println(io)
+        println(io)
+        println(io, "Atom Flows:")
+        pretty_table(io, stream.atomflows, display_size=(14, -1))
+        println(io)
+        println(io, "Data length:\t$(stream.numdata)")
+        println(io, "Data starts:\t$(timestamp(stream.massflows)[begin])")
+        println(io, "Data ends:\t$(timestamp(stream.massflows)[end])")   
     end
-end
-
-
-# Pretty printing for stream history objects
-function Base.show(io::IO, s::StreamHistory)
-    println(io, "StreamHistory: $(s.name)")
-    for compname in s.comps
-        comp = s.complist[compname]
-        println(io, "  ", rpad(comp.name, 9))
-    end
-
-    println(io)
-    println(io, "Data length:$(length(s.totalmassflow))")
-    println(io, "Data starts:\t$(s.timestamps[begin])")
-    println(io, "Data ends:\t$(s.timestamps[end])")
 end
 
 
 function  Base.show(io::IO, sl::StreamList)
     println(io, "Stream list:")
-    for strm in sl.list
-        println(io, "  ", strm.first)
+    println(io)
+    println(io, "Streams:")
+    if length(sl.list) > 0
+        for (name, _) in sl
+            println(io, "  ", name)
+        end
+
+        stream = first(sl.list).second
+        
+        println(io)
+        println(io, "Components:")
+        for (name, _) in stream.complist
+            println(io, "  ", name)
+        end
+
+        println(io)
+        println(io, "Data length:\t$(stream.numdata)")
+        println(io, "Data starts:\t$(timestamp(stream.massflows)[begin])")
+        println(io, "Data ends:\t$(timestamp(stream.massflows)[end])")    
+    else
+        println(io, "\tEmpty list")
     end
 end
 
 
-function  Base.show(io::IO, sl::StreamHistoryList)
-    println(io, "Stream list:")
-    if length(sl.list) > 0
-        for strm in sl.list
-            println(io, "  ", strm.first)
-        end
-        println(io)
-        strm = first(sl.list)
-        println(io, "Data length:\t$(length(strm.second.totalmassflow))")
-        println(io, "Data starts:\t$(strm.second.timestamps[begin])")
-        println(io, "Data ends:\t$(strm.second.timestamps[end])")    
-    else
-        println(io, "Empty list")
-    end
+function Base.iterate(A::StreamList)
+    return iterate(A.list)
+end
+
+
+function Base.iterate(A::StreamList, state)
+    return iterate(A.list, state)
 end
 
 
@@ -448,29 +322,31 @@ The names of components must match those in the specified componentlist
 (`syscomps::ComponentList` in the example). 
 
 
-    @stream "mass" begin
+    @stream mass begin
         "Ethylene" --> 2.8053
         "Ethane" --> 27.06192
         "Hydrogen" --> 2.21738
     end "Test" syscomps sysstreams
 
-    @stream "mole" begin 
+    @stream mole begin 
         "Ethylene" --> 0.1
         "Ethane" --> 0.9
         "Hydrogen" --> 1.1
     end "Product" syscomps sysstreams 
 
+The created Stream object will have data at a single timestamp of DateTime(0).
 """
 macro stream(flowtype::Symbol, ex::Expr, name::String, complist::Symbol, streamlist::Symbol)      
     local comps = String[]
     local flows = Float64[]
+    local timestamps = [DateTime(0)]
 
     if flowtype == :mass
         local ismoleflow = false
     elseif flowtype == :mole
         local ismoleflow = true
     else
-        error("flow basis specification must be mass or mole")
+        error("flow basis specification must be \"mass\" or \"mole\"")
     end
 
     for line in ex.args
@@ -487,7 +363,7 @@ macro stream(flowtype::Symbol, ex::Expr, name::String, complist::Symbol, streaml
             end
         end
     end
-    return :($(esc(streamlist))[$name] = Stream($name, $(esc(complist)), $comps, $flows, $ismoleflow))
+    return :($(esc(streamlist))[$name] = Stream($name, $(esc(complist)), $comps, $timestamps, $(flows'), $ismoleflow))
 end
 
 
@@ -499,13 +375,17 @@ end
 
 
 """
-    function copystream(list::StreamList, from::String, to::String)
+    function copystream!(list::StreamList, from::String, to::String)
 
 Copy a stream in the stream list
 """
-function copystream!(list::StreamList, from::String, to::String; factor=1.0)
-    str = factor*list[from]
-    list[to] = Stream(to, str.complist, str.comps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)
+function copystream!(list::StreamList, from::String, to::String; factor=1.0)   
+    fromstream = list[from]
+    comps = string.(colnames(fromstream.massflows))
+    timestamps = timestamp(fromstream.massflows)
+    flowdata = factor .* values(fromstream.massflows)
+   
+    list[to] = Stream(to, fromstream.complist, comps, timestamps, flowdata)
 
     return nothing
 end
@@ -523,83 +403,49 @@ function deletestream!(list::StreamList, from::String)
 end
 
 
+
 """
     function renamestream!(list::StreamList, from::String, to::String)
 
 Rename a stream in the stream list
 """
 function renamestream!(list::StreamList, from::String, to::String)
-    str = list[from]
-    list[to] = Stream(to, str.complist, str.comps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)
-    delete!(list.list, from)
+    fromstream = list[from]
+    comps = string.(colnames(fromstream.massflows))
+    timestamps = timestamp(fromstream.massflows)
+    flowdata = values(fromstream.massflows)
 
-    return nothing
-end
-
-
-"""
-    function renamestream(str::Stream, newname::String)
-
-Returns a copy of the stream with the new name. Internal use only, not exported.
-"""
-function renamestream(str::Stream, newname::String)
-    return Stream(newname, str.complist, str.comps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)  
-end
-
-
-function renamestream(str::StreamHistory, newname::String)
-    return StreamHistory(newname, str.numdata, str.complist, str.comps, str.timestamps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)  
-end
-
-
-"""
-    function copystreamhistory(list::StreamHistoryList, from::String, to::String)
-
-Copy a StreamHistory in the StreamHistoryList
-"""
-function copystreamhistory!(list::StreamHistory, from::String, to::String; factor=1.0)
-    str = factor*list[from]
-    list[to] = StreamHistory(to, str.numdata, str.complist, str.comps, str.timestamps, str.massflowshistory, 
-                             str.moleflowshistory, str.totalmassflowhistory, str.atomflowshistory)
-
-    return nothing
-end
-
-
-"""
-    function deletestreamhistory!(list::StreamHistoryList, from::String)
-
-Delete a StreamHistory from the StreamHistoryList
-"""
-function deletestreamhistory!(list::StreamHistoryList, from::String)
-    delete!(list.list, from)
-
-    return nothing
-end
-
-
-"""
-    function renamestream!(list::StreamHistoryList, from::String, to::String)
-
-Rename a StreamHistory in the StreamHistoryList
-"""
-function renamestreamhistory!(list::StreamHistoryList, from::String, to::String)
-    str = list[from]
-    list[to] = StreamHistory(to, str.numdata, str.complist, str.comps, str.timestamps, str.massflowshistory, 
-                             str.moleflowshistory, str.totalmassflowhistory, str.atomflowshistory)
-    delete!(list.list, from)
-
+    list[to] = Stream(to, fromstream.complist, comps, timestamps, flowdata)
+    deletestream!(list, from)
     return nothing
 end
 
 """
-    function renamestreamhistory(str::Stream, newname::String)
+    renamestream(strm::Stream, to::String)
 
-Returns a copy of the stream with the new name. Internal use only, not exported.
+Return a copy of the stream with a new name
 """
-function renamestreamhistory(str::StreamHistory, newname::String)
-    return StreamHistory(newname, str.numdata, str.complist, str.comps, str.timestamps, str.massflows, str.moleflows, str.totalmassflow, str.atomflows)  
+function renamestream(fromstream::Stream, to::String)
+    comps = string.(colnames(fromstream.massflows))
+    timestamps = timestamp(fromstream.massflows)
+    flowdata = values(fromstream.massflows)
+
+    return Stream(to, fromstream.complist, comps, timestamps, flowdata)
 end
+
+
+"""
+    emptystream(list::StreamList, name::String)
+
+Returns a stream with the same components and timestamp as the specified StreamList and all flows set to zero. 
+"""
+function emptystream(list::StreamList, name::String)
+    # Take the first stream in the StreamList as a reference
+    refstrm = first(list).second
+
+    return Stream(name, refstrm.complist, string.(colnames(refstrm.massflows)), timestamp(refstrm.massflows), zeros(size(refstrm.massflows)))
+end
+
 
 """
 
@@ -621,26 +467,22 @@ function readstreamhistory(filename, streamname, complist; ismoleflow=false)
     flows = data[:, 2:end]
     timestamps = DateTime.(data[:, 1], "yyyy/mm/dd HH:MM")
 
-    return StreamHistory(streamname, complist, comps, timestamps, transpose(flows), ismoleflow)
+    return Stream(streamname, complist, comps, timestamps, flows, ismoleflow)
 end
 
+
 """
-    showdata(hs::StreamHistory)
+    refreshcomplist(streamlist::StreamList)
 
-Display a table of the component flow history from hs::StreamHistory.
+Refresh all the streams in the StreamList to reflect components added to the StreamList after the streams were created.
 """
-function showdata(hs::StreamHistory)
-    titles = vcat("Timestamp", hs.comps)
-    data  = hcat(hs.timestamps, hs.massflows')
+function refreshcomplist(streamlist::StreamList)
+    for (name, stream) in streamlist
+        complist = stream.complist
+        comps = string.(colnames(stream.massflows))
+        timestamps = timestamp(stream.massflows)
+        flowdata = values(stream.massflows)
 
-    str = pretty_table(String, data, header=titles)
-
-    return str
+        streamlist[name] = Stream(name, complist, comps, timestamps, flowdata)
+    end
 end
-
-    
-
-
-
-
-
