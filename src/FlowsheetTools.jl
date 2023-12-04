@@ -1,5 +1,6 @@
 # TODO Should macros use ~ instead of ->??
 # TODO replace all @error and @assert with exceptions (where relevant)
+# TODO Add precompile workload
 
 module FlowsheetTools
 
