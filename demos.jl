@@ -31,7 +31,7 @@ writecomponent(joinpath("components/", "Nitrogen.comp"), syscomps["Nitrogen"])
 sysstreams = StreamList()
 
 # You can create the streams directly with instantaneous flows
-# This can be in either mass or molar unitops
+# This can be in either mass or molar units
 # The units are not specified - if you assume the mass flows are
 # in kg/h, then the molar equivalent is kmol/hr, but this could
 #  as easily be lb/week and lbmole/week.
@@ -48,7 +48,7 @@ end "Test" syscomps sysstreams
     "Ethylene" --> 0.1
 end "Product" syscomps sysstreams
 
-# One stream was specified as mass flows, the other as mass flows,
+# One stream was specified as mass flows, the other as molar flows,
 # but these streams are the same and the missing flows are calculated
 # automatically
 
@@ -80,10 +80,6 @@ end "Argon" syscomps
 refreshcomplist(sysstreams)
 
 sysstreams["Feed"]
-
-
-# ================================
-
 
 # Manipulate some streams
 
@@ -216,11 +212,11 @@ mean(values(sc2))
 
 
 # Lets introduce some errors and check our closure corrections
-
+# copystream!() can take a factor which it multiplies the flows in the source stream with
 copystream!(sysstreams, "C2", "eC2", factor = 1.05)
 copystream!(sysstreams, "H2", "eH2", factor = 0.95)
 copystream!(sysstreams, "Product", "eProduct")
-sysstreams["eMixed"] = emptystream(sysstreams, "eMixed")
+sysstreams["eMixed"] = emptystream(sysstreams, "eMixed") # We'll calculate this stream with the mixer model
 
 
 # Define the unit ops and boundary
