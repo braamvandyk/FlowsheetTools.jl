@@ -11,7 +11,6 @@
  - Add a stoichiometric reactor to unitops
  - Overload Base.==
  - Overload Base.≈
- - Resync demo notebook with script
 
  ## MAYBE
  - Create Plots/Makie recipes for plotting stuff - mostly handled through using TimeSeries

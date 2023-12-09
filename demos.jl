@@ -178,8 +178,8 @@ sysunitops["ProductSplitter"]()
         "Hydrogen" => Dict(["Product1a" => 0.5]),
         "Ethane" => Dict(["Product1b" => 0.3])
     ])
-end "ProductSplitter" sysstreams sysunitops
-sysunitops["ProductSplitter"]()
+end "ComponentSplitter" sysstreams sysunitops
+sysunitops["ComponentSplitter"]()
 
 # And then we mix it all again and check that we still have Product
 @unitop begin
