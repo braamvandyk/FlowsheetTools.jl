@@ -134,7 +134,6 @@ sysstreams["Mixed"] = emptystream(sysstreams, "Mixed")
     "Hydrogen" --> 1.0
 end "Product" syscomps sysstreams
 
-
 # Define some unit ops
 sysunitops = UnitOpList()
 
@@ -149,6 +148,49 @@ sysunitops["Mixer"]()
     inlets --> ["Mixed"]
     outlets --> ["Product"]
 end "Reactor" sysstreams sysunitops
+
+# Let's split the product a little. We'll need some empty streams
+sysstreams["Product1"] = emptystream(sysstreams, "Product1");
+sysstreams["Product1a"] = emptystream(sysstreams, "Product1a");
+sysstreams["Product1b"] = emptystream(sysstreams, "Product1b");
+sysstreams["Product2"] = emptystream(sysstreams, "Product2");
+sysstreams["Product3"] = emptystream(sysstreams, "Product3");
+
+# A flow splitter that splits 50% of the product to each of Product1 and Product2
+# These streams will have identcal compositions
+@unitop begin
+    inlets --> ["Product"]
+    outlets --> ["Product1", "Product2"]
+    calc --> flowsplitter!
+    params --> [0.5]
+end "ProductSplitter" sysstreams sysunitops
+sysunitops["ProductSplitter"]()
+
+# A component splitter that splits Product1 into Product1a and Product1b
+# These streams will have different compositions, with 
+# the hydrogen split 50:50, 70% of the ethane going to Product1b and the
+# remainder of Product1, going to Product1b (the last stream listed)
+@unitop begin
+    inlets --> ["Product1"]
+    outlets --> ["Product1a", "Product1b"]
+    calc --> componentplitter!
+    params --> Dict([
+        "Hydrogen" => Dict(["Product1a" => 0.5]),
+        "Ethane" => Dict(["Product1b" => 0.3])
+    ])
+end "ProductSplitter" sysstreams sysunitops
+sysunitops["ProductSplitter"]()
+
+# And then we mix it all again and check that we still have Product
+@unitop begin
+    inlets --> ["Product1a", "Product1b", "Product2"]
+    outlets --> ["Product3"]
+    calc --> mixer!
+end "Mixer2" sysstreams sysunitops
+sysunitops["Mixer2"]()
+
+# Check that the two streams have the same flows
+all(values(sysstreams["Product"].massflows .≈ sysstreams["Product3"].massflows))
 
 # Define a mass balance boundary
 @boundary begin
@@ -166,6 +208,8 @@ conversion(b, "Ethane")
 conversion(b, "Ethylene")
 conversion(b, "Hydrogen")
 molar_selectivity(b, "Ethylene", "Ethane")
+
+
 
 # Let's do the same with some history attached to the streams
 
@@ -189,6 +233,43 @@ sysunitops["Mixer"]()
     inlets --> ["Mixed"]
     outlets --> ["Product"]
 end "Reactor" sysstreams sysunitops
+
+sysstreams["Product1"] = emptystream(sysstreams, "Product1");
+sysstreams["Product1a"] = emptystream(sysstreams, "Product1a");
+sysstreams["Product1b"] = emptystream(sysstreams, "Product1b");
+sysstreams["Product2"] = emptystream(sysstreams, "Product2");
+sysstreams["Product3"] = emptystream(sysstreams, "Product3");
+
+
+@unitop begin
+    inlets --> ["Product"]
+    outlets --> ["Product1", "Product2"]
+    calc --> flowsplitter!
+    params --> [0.5]
+end "ProductSplitter" sysstreams sysunitops
+sysunitops["ProductSplitter"]()
+
+@unitop begin
+    inlets --> ["Product1"]
+    outlets --> ["Product1a", "Product1b"]
+    calc --> componentplitter!
+    params --> Dict([
+        "Hydrogen" => Dict(["Product1a" => 0.5]),
+        "Ethane" => Dict(["Product1b" => 0.3])
+    ])
+end "ProductSplitter" sysstreams sysunitops
+sysunitops["ProductSplitter"]()
+
+@unitop begin
+    inlets --> ["Product1a", "Product1b", "Product2"]
+    outlets --> ["Product3"]
+    calc --> mixer!
+end "Mixer2" sysstreams sysunitops
+sysunitops["Mixer2"]()
+
+# Check that the two streams have the same flows
+all(values(sysstreams["Product"].massflows .≈ sysstreams["Product3"].massflows))
+
 
 # Define a mass balance boundary
 @boundary begin

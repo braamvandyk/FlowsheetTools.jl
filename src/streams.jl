@@ -236,7 +236,7 @@ function  Base.copy(A::Stream)
 end
 
 
-# # Pretty printing for stream objects
+# Pretty printing for stream objects
 function Base.show(io::IO, stream::Stream)
     println(io, "Stream: $(stream.name)")
     println(io)

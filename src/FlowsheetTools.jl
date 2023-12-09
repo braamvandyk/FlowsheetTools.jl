@@ -6,7 +6,7 @@ module FlowsheetTools
 
 export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomponentlist!, names,
         Stream, StreamList, @stream, copystream!, deletestream!, renamestream!, renamestream, emptystream, readstreamhistory, refreshcomplist,
-        UnitOp, UnitOpList, @unitop, mixer!,
+        UnitOp, UnitOpList, @unitop, mixer!, flowsplitter!, componentplitter!,
         BalanceBoundary, @boundary, showdata, 
         calccorrections, closemb,
         conversion, molar_selectivity,
