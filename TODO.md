@@ -9,11 +9,7 @@
  - Add some form of feedback when a Flowsheet executes
  - Add a precompile workload
  - Add a stoichiometric reactor to unitops
- - Overload Base.==
- - Overload Base.≈
+ - Overload Base.== or Base.≈
 
  ## MAYBE
- - Create Plots/Makie recipes for plotting stuff - mostly handled through using TimeSeries
- - Add callbacks to mermaid diagram to display streams when clicking on them
- - Reconsider using --> vs ~ in macros
  - Replace @assert and @error with throw?
