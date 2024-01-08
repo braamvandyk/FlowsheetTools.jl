@@ -24,6 +24,9 @@ using Base64,                   # Used to encode strings to pass Mermaid diagram
       PrettyTables,             # Used for pretty printing
       Statistics,               # Basic statistical functions
       TimeSeries                # Used for TimeArray in Streams
+      # RowEchelon
+      # ArgCheck
+
 
 
 import Base.setindex!
