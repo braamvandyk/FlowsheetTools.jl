@@ -89,7 +89,7 @@ function calccorrections(boundary::BalanceBoundary, anchor::String; totalweight=
 end
 
 """
-    function closemb(boundary::BalanceBoundary, [corrections::Dict{String, Float64}])
+    function closemb_simple(boundary::BalanceBoundary, [corrections::Dict{String, Float64}])
 
 Apply the mass balance reconciliation. The corrections can first calculated using `calccorrections`
 and can then be applied to multiple boundaries using this function. If no corrections are passed,
@@ -97,7 +97,7 @@ and can then be applied to multiple boundaries using this function. If no correc
 
 Since balance boundaries are immutable, a new boundary instance is returned.
 """
-function closemb(boundary::BalanceBoundary; corrections=nothing, anchor=nothing, totalweight=1.0, elementweight=1.0)
+function closemb_simple(boundary::BalanceBoundary; corrections=nothing, anchor=nothing, totalweight=1.0, elementweight=1.0)
     if isnothing(corrections)
         isnothing(anchor) && error("an anchor stream must be specified")
         corrections = calccorrections(boundary, anchor; totalweight, elementweight)

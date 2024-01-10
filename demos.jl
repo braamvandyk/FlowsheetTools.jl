@@ -321,7 +321,7 @@ end b sysunitops
 
 # Get the correction factors on the inlets and outlets
 corrections = calccorrections(b, "eProduct")
-b2 = closemb(b, anchor = "eProduct")
+b2 = closemb_simple(b, anchor = "eProduct")
 sysunitops["eMixer"]()
 
 mean(values(b.closure))

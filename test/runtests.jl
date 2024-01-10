@@ -148,7 +148,7 @@ end
     @test c ≈ 1.00791
 
 
-    b2 = closemb(b2)
+    b2 = closemb_simple(b2)
     c = round(b2.atomclosures["C"], sigdigits=6)
     @test c ≈ 0.999906
     c = round(b2.atomclosures["H"], sigdigits=6)
