@@ -233,8 +233,8 @@ function boundarystreams(unitlist::UnitOpList, units::Vector{String})
     inlets = inlets[keep_in]
     outlets = outlets[keep_out]
 
-    @assert length(inlets) > 0 "zero inlet streams to the boundary"
-    @assert length(outlets) > 0 "zero outlet streams from the boundary"
+    @argcheck length(inlets) > 0 "zero inlet streams to the boundary"
+    @argcheck length(outlets) > 0 "zero outlet streams from the boundary"
 
     return inlets, outlets, internals
 end

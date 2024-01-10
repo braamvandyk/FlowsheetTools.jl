@@ -11,7 +11,7 @@ function findsteps(data; window=3, noiseperc=0.9)
     revmean = similar(data)
 
     numdata = length(data)
-    @assert numdata > 2*window "Too few data points ($numdata) for the selectived window size ($window)."
+    @argcheck numdata > 2*window "Too few data points ($numdata) for the selectived window size ($window)."
     
     # Calculate the forward and reverse moving averages `window` points from i
     # i.e. the actual window is `window + 1` points wide

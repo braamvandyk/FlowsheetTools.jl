@@ -27,8 +27,6 @@ using ArgCheck,                 # Replace simple @asserts with ArgCheck
       RowEchelon,               # Used for rref
       Statistics,               # Basic statistical functions
       TimeSeries                # Used for TimeArray in Streams
-      # RowEchelon
-      # ArgCheck
 
 
 

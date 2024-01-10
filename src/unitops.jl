@@ -115,7 +115,7 @@ Calculation for mixer UnitOps. Combines all feed streams into a single outlet st
 Will error if more than one outlet stream is defined. Values in `params` are ignored.
 """
 function mixer!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
-    @assert length(outlets) == 1 "mixers can have only one outlet stream"
+    @argcheck length(outlets) == 1 "mixers can have only one outlet stream"
 
     name = streamlist[outlets[1]].name     
     tempstream = sum(streamlist[inlets])
@@ -138,8 +138,8 @@ function flowsplitter!(streamlist::StreamList, outlets::Vector{String}, inlets::
     numouts = length(outlets)
     sumfracs = sum(params)
 
-    @assert length(params) == (numouts - 1) "incorrect number of fractions - must be one less than outlets"
-    @assert 0.0 <= sumfracs <= 1.0 "invalid split fractions specified"
+    @argcheck length(params) == (numouts - 1) "incorrect number of fractions - must be one less than outlets"
+    @argcheck 0.0 <= sumfracs <= 1.0 "invalid split fractions specified"
 
     totalin = sum(streamlist[inlets])
     
@@ -187,13 +187,13 @@ function componentplitter!(streamlist::StreamList, outlets::Vector{String}, inle
         if compname in keys(params)
             #  This component has specified splits
             splits = params[compname]
-            @assert length(splits) == numouts - 1 "incorrect number of fractions specified for component $compname"
+            @argcheck length(splits) == numouts - 1 "incorrect number of fractions specified for component $compname"
             for split in splits
                 stream = split.first
-                @assert stream in outlets "specified stream not in list of outlet streams"
+                @argcheck stream in outlets "specified stream not in list of outlet streams"
                 streamindex = findfirst(str -> str == stream, outlets)
                 fraction = split.second
-                @assert 0.0 <= fraction <= 1.0 "invalid fraction specified for $compname in stream @stream"
+                @argcheck 0.0 <= fraction <= 1.0 "invalid fraction specified for $compname in stream @stream"
                 fractions[compindex, streamindex] = fraction
             end
         end
