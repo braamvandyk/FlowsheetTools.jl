@@ -32,7 +32,7 @@ function calccorrections(boundary::BalanceBoundary, anchor::String; totalweight=
     elseif anchor in outlets
         anchorinlet = false
     else
-        error("anchor $anchor not in inlets or outlets")
+        throw(ArgumentError("anchor $anchor not in inlets or outlets"))
     end
 
     if anchorinlet
@@ -99,7 +99,7 @@ Since balance boundaries are immutable, a new boundary instance is returned.
 """
 function closemb_simple(boundary::BalanceBoundary; corrections=nothing, anchor=nothing, totalweight=1.0, elementweight=1.0)
     if isnothing(corrections)
-        isnothing(anchor) && error("an anchor stream must be specified")
+        isnothing(anchor) && throw(ArgumentError("an anchor stream must be specified"))
         corrections = calccorrections(boundary, anchor; totalweight, elementweight)
     end
 

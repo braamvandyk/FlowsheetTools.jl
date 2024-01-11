@@ -1,7 +1,5 @@
 # Things to do
 
- - Replace @assert and @error with throw?
-
  ## YES
  - Add proper mass balance recon algorithm
  - Add change point detection and stationarity checks to isolate (pseudo)steady states

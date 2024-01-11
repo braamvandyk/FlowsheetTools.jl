@@ -127,7 +127,7 @@ macro comp(ex::Expr, name::String, complist::Symbol)
         if match_atom
             atom = String(atom_sym)
             if !(atom in values(Atoms.atomsymbols))
-                error("Invalid symbol for atom specified.")
+                throw(ArgumentError("Invalid symbol for atom specified."))
             end
             if atom in atoms
                 i = findfirst(x -> x == atom, atoms)

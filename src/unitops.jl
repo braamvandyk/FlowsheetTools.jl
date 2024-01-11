@@ -28,15 +28,15 @@ struct UnitOp
             inlet = streamlist[inletname]
             inlet_ts = timestamp(inlet.massflows)
 
-            inlet.numdata != numdata && error("all streams must must have identical history lengths.")
-            !all(inlet_ts .== timestamps) && error("all streams must must have identical timestamps.")
+            inlet.numdata != numdata && throw(DimensionMismatch("all streams must must have identical history lengths."))
+            !all(inlet_ts .== timestamps) && throw(ArgumentError("all streams must must have identical timestamps."))
         end
         for outletname in outlets
             outlet = streamlist[outletname]
             outlet_ts = timestamp(outlet.massflows)
 
-            outlet.numdata != numdata && error("all streams must must have identical history lengths.")
-            !all(outlet_ts .== timestamps) && error("all streams must must have identical timestamps.")
+            outlet.numdata != numdata && throw(DimensionMismatch("all streams must must have identical history lengths."))
+            !all(outlet_ts .== timestamps) && throw(ArgumentError("all streams must must have identical timestamps."))
         end
 
         new(name, streamlist, inlets, outlets, f!, params)
@@ -251,7 +251,7 @@ function Base.setindex!(A::UnitOpList, X::UnitOp, idx::String)
         # We get the value entry using the `second` field of the `Pair`, which returns a `UnitOp`,
         # of which we get the `streamlist` field.
         currentlist = first(A.list).second.streamlist
-        X.streamlist != currentlist && error("all unit operations in UnitOpList must reference the same StreamList")
+        X.streamlist != currentlist && throw(ArgumentError("all unit operations in UnitOpList must reference the same StreamList"))
 
         A.list[idx] = X
     end

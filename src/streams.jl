@@ -58,8 +58,8 @@ function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
 
     
     # Sanity checks on the data
-    size(flowdata, 2) != numcomps && error("mismatch between number of components and available data.")
-    length(timestamps) != numdata && error("length mismatch between data and timestamps.")
+    size(flowdata, 2) != numcomps && throw(DimensionMismatch("mismatch between number of components and available data."))
+    length(timestamps) != numdata && throw(DimensionMismatch("length mismatch between data and timestamps."))
     
     # Build the TimeArrays
     allcomps = names(complist) # Also those not present in the stream
@@ -156,8 +156,8 @@ function Base.setindex!(A::StreamList, X::Stream, idx::String)
         currentlist = first(A.list).second.complist
         current_ts = timestamp(first(A.list).second.massflows)
 
-        X.complist != currentlist && error("all streams in StreamList must reference the same ComponentList")
-        !all(timestamp(X.massflows) .== current_ts) && error("all streams in StreamList must have the same timestamps")
+        X.complist != currentlist && throw(ArgumentError("all streams in StreamList must reference the same ComponentList"))
+        !all(timestamp(X.massflows) .== current_ts) && throw(ArgumentError("all streams in StreamList must have the same timestamps"))
 
         A.list[idx] = X
     end
@@ -194,9 +194,9 @@ All streams must refer to the same component list .
 function Base.:+(a::Stream, b::Stream)
     # Make sure the streams use the same system components and timestamps 
     # TimeArrays will add only matching timestamps, but this result in varying data lengths, which must be avoided
-    a.complist != b.complist && error("cannot add streams with different system component lists")
-    a.numdata != b.numdata && error("cannot add streams with different data lengths")
-    !all(timestamp(a.massflows) .== timestamp(b.massflows)) && error("cannot add streams with different timestamps")
+    a.complist != b.complist && throw(ArgumentError("cannot add streams with different system component lists"))
+    a.numdata != b.numdata && throw(DimensionMismatch("cannot add streams with different data lengths"))
+    !all(timestamp(a.massflows) .== timestamp(b.massflows)) && throw(ArgumentError("cannot add streams with different timestamps"))
 
     comps = string.(colnames(a.massflows))
     timestamps = timestamp(a.massflows)
@@ -346,7 +346,7 @@ macro stream(flowtype::Symbol, ex::Expr, name::String, complist::Symbol, streaml
     elseif flowtype == :mole
         local ismoleflow = true
     else
-        error("flow basis specification must be \"mass\" or \"mole\"")
+        throw(ArgumentError("flow basis specification must be \"mass\" or \"mole\""))
     end
 
     for line in ex.args

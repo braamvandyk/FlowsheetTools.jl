@@ -30,8 +30,8 @@ struct BalanceBoundary
     # Internal constructor to ensurte that all inlets and outlets have the same number of historic data points
     # and identical timestamps. It is only required here in case the user doesn't use the outer constructor
     function BalanceBoundary(unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
-        total_in.numdata != total_out.numdata && error("all in/outlets must must have similar history lengths.")
-        !all(timestamp(total_in.massflows) .== timestamp(total_out.massflows)) && error("all in/outlets must must have identical timestamps.")
+        total_in.numdata != total_out.numdata && throw(DimensionMismatch("all in/outlets must must have similar history lengths."))
+        !all(timestamp(total_in.massflows) .== timestamp(total_out.massflows)) && throw(DimensionMismatch("all in/outlets must must have identical timestamps."))
         new(unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
     end
 end
@@ -75,8 +75,8 @@ function BalanceBoundary(unitlist::UnitOpList, units::Vector{String})
     total_out = sum(outlets)
 
     # Ensure that all inlets and outlets have the same number of historic data points at the same timestamps
-    total_in.numdata != total_out.numdata && error("all in/outlets must must have similar history lengths.")
-    !all(timestamp(total_in.massflows) .== timestamp(total_out.massflows)) && error("all in/outlets must must have identical timestamps.")
+    total_in.numdata != total_out.numdata && throw(DimensionMismatch("all in/outlets must must have similar history lengths."))
+    !all(timestamp(total_in.massflows) .== timestamp(total_out.massflows)) && throw(DimensionMismatch("all in/outlets must must have identical timestamps."))
 
     # Calculate the closures
     closure = total_out.totalmassflow ./ total_in.totalmassflow

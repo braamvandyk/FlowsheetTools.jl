@@ -62,7 +62,7 @@ function addunitop!(fs::Flowsheet, u::String)
         push!(fs.units, u)
         push!(fs.execution_order, length(fs.execution_order) + 1)
     else
-        error("unitop $u not defined in list $(fs.unitlist)")
+        throw(ArgumentError("unitop $u not defined in list $(fs.unitlist)"))
     end
 
     return nothing
@@ -75,7 +75,7 @@ function addunitop!(fs::Flowsheet, us::Vector{String})
             push!(fs.units, u)
             push!(fs.execution_order, length(fs.execution_order) + 1)
         else
-            error("unitop $u not defined in list $(fs.unitlist)")
+            throw(ArgumentError("unitop $u not defined in list $(fs.unitlist)"))
         end
     end
 
@@ -219,7 +219,7 @@ function generateBFD(fs::Flowsheet, filename = nothing)
         name, ext = splitext(filename)
         ext = lowercase(ext[2:end])
         if ext ∉ ["svg", "png"]
-            error("Can only generate .svg or .png files.")
+            throw(ArgumentError("Can only generate .svg or .png files."))
         end
         (ext == "png") && (ext = "img")
     else
