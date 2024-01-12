@@ -72,6 +72,7 @@ function calccorrections(boundary::BalanceBoundary, anchor::String; totalweight=
     end
 
     res = optimize(f, factors, BFGS())
+    # res = optimize(f, factors)
     _optfactors = res.minimizer
     optfactors = vcat(_optfactors[1:anchorindex-1], 1.0, _optfactors[anchorindex:end])
 

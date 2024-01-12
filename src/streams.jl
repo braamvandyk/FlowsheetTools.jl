@@ -185,6 +185,10 @@ function Base.length(A::StreamList)
 end
 
 
+function Base.length(A::Stream)
+    return A.numdata
+end
+
 """
     Base.:+(a::Stream, b::Stream)
 
@@ -228,6 +232,30 @@ function Base.:*(b::Stream, a::T) where T <: Real
     flowdata = values(a .* b.massflows)
    
     return Stream(b.name, b.complist, comps, timestamps, flowdata)
+end
+
+
+"""
+    Base.:≈(a::Stream, b::Stream)
+
+Extend the ≈ operator to check if two streams have approximately equal flows.
+The check is done internally on molar flows.
+"""
+function Base.:≈(a::Stream, b::Stream)
+    return all(values(a.moleflows) .≈ values(b.moleflows))
+end
+
+
+"""
+    Base.:(==)(a::Stream, b::Stream)
+
+Extend the == operator to check if two streams have equal flows.
+The check is done internally on molar flows.
+
+Since flows are floating point values, it is recommended to rather use ≈ for comparisons.
+"""
+function Base.:(==)(a::Stream, b::Stream)
+    return all(values(a.moleflows) .== values(b.moleflows))
 end
 
 

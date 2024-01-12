@@ -9,7 +9,6 @@
  - Add some form of feedback when a Flowsheet executes -> write a Base.show for Flowsheet
  - Add a precompile workload
  - Add a stoichiometric reactor to unitops
- - Overload Base.== or Base.≈
 
  ### Data clean-up
   - Should be a separate step, before reconciliation

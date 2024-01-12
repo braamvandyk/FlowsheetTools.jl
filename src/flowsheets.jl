@@ -111,7 +111,7 @@ function setorder!(fs::Flowsheet, neworder)
 end
 
 
-function generateBFD(fs::Flowsheet, filename = nothing)
+function generateBFD(fs::Flowsheet, filename = nothing; displaybfd=true)
 #=
     Assign each unit op an id = its name (without whitespace)    
     
@@ -243,12 +243,12 @@ function generateBFD(fs::Flowsheet, filename = nothing)
         f = open(filename, "r")
         img = read(f, String)
         close(f)
-        display("image/svg+xml", img)
+        displaybfd && display("image/svg+xml", img)
     else
         f = open(filename, "r")
         img = read(f)
         close(f)
-        display("image/png", img)
+        displaybfd && display("image/png", img)
     end
   
     # Return the filename
