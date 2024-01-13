@@ -417,7 +417,9 @@ print(showdata(b2)) #src
 fs = Flowsheet(sysunitops, ["Reactor"], [1])
 addunitop!(fs, ["Mixer", "ProductSplitter", "ComponentSplitter", "Mixer2"])
 
-fs()
+#jl fs();
+#nb fs()
+fs() #src
 
 # Lastly, once a `Flowsheet` object is created, a block flow diagram can also be generated.
 

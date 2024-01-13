@@ -12,14 +12,16 @@ struct Flowsheet
 end
 
 
-function (fs::Flowsheet)(neworder = nothing)
+function (fs::Flowsheet)(neworder = nothing; showoutput=true)
     if isnothing(neworder)
         for i in fs.execution_order
+            showoutput && println(i, "  ", fs.units[i])
             fs.unitlist[fs.units[i]]()
         end
     else
         for i in neworder
             u = fs.units[i]
+            showoutput && println(i, "  ", fs.units[i])
             u()
         end
     end

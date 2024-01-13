@@ -59,7 +59,7 @@ include("flowsheets.jl")
 
 # @setup_workload begin
 #       @compile_workload begin
-#             include("./precompile./demos.jl")
+#             include("./precompile./workload.jl")
 #       end
 # end
 

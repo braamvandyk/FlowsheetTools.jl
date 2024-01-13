@@ -7,7 +7,6 @@
  - Define unit tests for CI at some future point
  - Add docstrings to functions without them
  - Add some form of feedback when a Flowsheet executes -> write a Base.show for Flowsheet
- - Add a precompile workload
  - Add a stoichiometric reactor to unitops
 
  ### Data clean-up

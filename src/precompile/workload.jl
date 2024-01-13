@@ -1,5 +1,3 @@
-using FlowsheetTools, Statistics
-
 syscomps = ComponentList()
 
 count = readcomponentlist!(syscomps, "components", ["Ethylene", "Ethane", "Hydrogen"])
@@ -25,14 +23,10 @@ end "Test" syscomps sysstreams
 end "Product" syscomps sysstreams
 
 sysstreams["Test"].moleflows .≈ sysstreams["Product"].moleflows
-
 sysstreams["Test"] ≈ sysstreams["Product"]
-
 sysstreams["Test"] == sysstreams["Product"]
 
 all(getindex.(values(sysstreams["Test"].atomflows), "C") .== getindex.(values(sysstreams["Product"].atomflows), "C"))
-
-all(getindex.(values(sysstreams["Test"].atomflows), "H") .== getindex.(values(sysstreams["Product"].atomflows), "H"))
 
 sysstreams = StreamList()
 
@@ -45,33 +39,13 @@ end "Argon" syscomps
 
 refreshcomplist(sysstreams)
 
-sysstreams["Feed"];
-
 sysstreams["Prod2"] = 2.0*sysstreams["Product"]
-
 sysstreams["Prod2"] == 2.0*sysstreams["Product"]
-
-all(values(sysstreams["Prod2"].totalmassflow) .== values(2.0 .* sysstreams["Product"].totalmassflow))
 
 copystream!(sysstreams, "Product", "MyStream")
 copystream!(sysstreams, "Product", "MyStream2"; factor=2.0)
-sysstreams["MyStream2"] ≈ 2.0 * sysstreams["MyStream"]
-
-copystream!(sysstreams, "Product", "MyStream")
-sysstreams["Product"] == sysstreams["MyStream"]
-
-copystream!(sysstreams, "Product", "MyStream2"; factor=2.0) # double the flow!
-2.0 * sysstreams["Product"] == sysstreams["MyStream2"]
-
-all(getindex.(values(sysstreams["Product"].atomflows), "C") .== getindex.(values(sysstreams["MyStream"].atomflows), "C"))
-
-all(getindex.(values(sysstreams["Product"].atomflows), "H") .== getindex.(values(sysstreams["MyStream"].atomflows), "H"))
-
-all(getindex.(values(sysstreams["Product"].atomflows), "N") .== getindex.(values(sysstreams["MyStream"].atomflows), "N"))
-
 renamestream!(sysstreams, "MyStream", "Dummy")
 deletestream!(sysstreams, "Dummy")
-sysstreams
 
 sysstreams = StreamList()
 
@@ -148,18 +122,12 @@ sysstreams["Product"] ≈ sysstreams["Product3"]
     unitops --> ["Mixer", "Reactor"]
 end b sysunitops
 
-b.atomclosures
+b.atomclosures;
+b.closure;
+b.total_in.totalmassflow;
+b.total_out.totalmassflow;
 
-b.closure
-
-b.total_in.totalmassflow
-
-b.total_out.totalmassflow
-
-conversion(b, "Ethane")
-
-(conversion(b, "Ethylene"), conversion(b, "Hydrogen"))
-
+conversion(b, "Ethane");
 molar_selectivity(b, "Ethylene", "Ethane")
 
 sysstreams = StreamList() # Create a new container and dump the previous streams
@@ -219,20 +187,13 @@ sysstreams["Product"] ≈ sysstreams["Product3"]
     unitops --> ["Mixer", "Reactor"]
 end b sysunitops
 
-b.atomclosures
-
-b.closure
-
-b.total_in.totalmassflow
-
-b.total_out.totalmassflow
-
+b.atomclosures;
+b.closure;
+b.total_in.totalmassflow;
+b.total_out.totalmassflow;
 c1 = conversion(b, "Ethane")
 c2 = conversion(b, "Ethylene")
-
 sc2 = molar_selectivity(b, "Ethylene", "Ethane")
-
-(mean(values(c1)), mean(values(c2)), mean(values(sc2)))
 
 copystream!(sysstreams, "C2", "eC2", factor = 1.05)
 copystream!(sysstreams, "H2", "eH2", factor = 0.95)
@@ -256,24 +217,14 @@ end "eReactor" sysstreams sysunitops
 end b sysunitops
 
 corrections = calccorrections(b, "eProduct")
-
-#= `calccorrections` takes a boundary for which to calculate the correction factors, an anchor stream, for which the correction is always 1.0 - no change, and then optional weights for the total mass balance error and the elemental errors.
-These latter values default to 1.0 each.
-
-    `function calccorrections(boundary::BalanceBoundary, anchor::String; totalweight=1.0, elementweight=1.0)`
-=#
-
 b2 = closemb_simple(b, anchor = "eProduct")
-
-(mean(values(b.closure)), mean(values(b2.closure)))
 
 showdata(b2)
 
 fs = Flowsheet(sysunitops, ["Reactor"], [1])
 addunitop!(fs, ["Mixer", "ProductSplitter", "ComponentSplitter", "Mixer2"])
 
-fs()
+fs(showoutput = false);
+# generateBFD(fs, "./myflowsheet.svg", displaybfd=false);
 
-generateBFD(fs, "./myflowsheet.svg", displaybfd=false);
 
-# This file was generated using Literate.jl, https://github.com/fredrikekre/Literate.jl
