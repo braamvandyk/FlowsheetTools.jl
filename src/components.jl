@@ -176,7 +176,7 @@ end
 """
     function readcomp(filename::String)
 
-Read a Component struct from a JSON file.
+Read a Component struct from a file.
 """
 function readcomponent(filename::String)
     f = open(filename, "r")

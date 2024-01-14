@@ -6,9 +6,11 @@
 #
 #----------------------------------------------------------------------------
 
+@enum StreamStatus measured unmeasured fixed
 
 struct Stream
     name::String
+    status::StreamStatus
 
     # Number of historic data points
     numdata::Integer
@@ -189,12 +191,9 @@ function Base.length(A::Stream)
     return A.numdata
 end
 
-"""
-    Base.:+(a::Stream, b::Stream)
 
-Extend the addition operator to add to streams to each other - a mixer.
-All streams must refer to the same component list .
-"""
+# Extend the addition operator to add to streams to each other - a mixer.
+# All streams must refer to the same component list .
 function Base.:+(a::Stream, b::Stream)
     # Make sure the streams use the same system components and timestamps 
     # TimeArrays will add only matching timestamps, but this result in varying data lengths, which must be avoided
@@ -211,12 +210,8 @@ function Base.:+(a::Stream, b::Stream)
 end
 
 
-"""
-    Base.*(a::T, b::Stream) where T <: Real
-
-Extend the multiplication operator to scale a stream's flows by a scalar value.
-Used in mass balance reconciliations to apply flow corrections.
-"""
+# Extend the multiplication operator to scale a stream's flows by a scalar value.
+# Used in mass balance reconciliations to apply flow corrections.
 function Base.:*(a::T, b::Stream) where T <: Real
     comps = string.(colnames(b.massflows))
     timestamps = timestamp(b.massflows)
@@ -235,25 +230,16 @@ function Base.:*(b::Stream, a::T) where T <: Real
 end
 
 
-"""
-    Base.:≈(a::Stream, b::Stream)
-
-Extend the ≈ operator to check if two streams have approximately equal flows.
-The check is done internally on molar flows.
-"""
+# Extend the ≈ operator to check if two streams have approximately equal flows.
+# The check is done internally on molar flows.
 function Base.:≈(a::Stream, b::Stream)
     return all(values(a.moleflows) .≈ values(b.moleflows))
 end
 
 
-"""
-    Base.:(==)(a::Stream, b::Stream)
-
-Extend the == operator to check if two streams have equal flows.
-The check is done internally on molar flows.
-
-Since flows are floating point values, it is recommended to rather use ≈ for comparisons.
-"""
+# Extend the == operator to check if two streams have equal flows.
+# The check is done internally on molar flows.
+# Since flows are floating point values, it is recommended to rather use ≈ for comparisons.
 function Base.:(==)(a::Stream, b::Stream)
     return all(values(a.moleflows) .== values(b.moleflows))
 end
@@ -472,6 +458,19 @@ function emptystream(list::StreamList, name::String)
     refstrm = first(list).second
 
     return Stream(name, refstrm.complist, string.(colnames(refstrm.massflows)), timestamp(refstrm.massflows), zeros(size(refstrm.massflows)))
+end
+
+
+"""
+    fixedstream(list::StreamList, name::String, flow<:Real)
+
+Returns a stream with the same components and timestamp as the specified StreamList and all flows set to a specified constant value. 
+"""
+function fixedstream(list::StreamList, name::String, flow<:Real)
+    # Take the first stream in the StreamList as a reference
+    refstrm = first(list).second
+
+    return Stream(name, refstrm.complist, string.(colnames(refstrm.massflows)), timestamp(refstrm.massflows), flow .* ones(size(refstrm.massflows)))
 end
 
 
