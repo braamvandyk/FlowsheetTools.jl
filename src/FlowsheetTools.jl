@@ -11,16 +11,16 @@ export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomp
 
 using ArgCheck,                 # Replace simple @asserts with ArgCheck
       Base64,                   # Used to encode strings to pass Mermaid diagram definition to server
-      ChangePointDetection,     # Used to detect changepoints (step changes)
+      # ChangePointDetection,     # Used to detect changepoints (step changes)
       Dates,                    # Used with all DateTime types
       DelimitedFiles,           # Used for reading stream histories
       Downloads,                # Used to pass Mermaid diagram definition to server
-      HypothesisTests,          # Used for Augmented Dickey-Fuller test to see if data has a slop between changepoints
+      # HypothesisTests,          # Used for Augmented Dickey-Fuller test to see if data has a slop between changepoints
       Interpolations,           # Used for extrapolation to endpoints in cleaning up data
       InvertedIndices,          # Used for dropping selected rows and columns from matrices
-      Loess,                    # Used for smoothing and filling data sets
+      # Loess,                    # Used for smoothing and filling data sets
       MacroTools,               # Used for @comp, @stream etc
-      Missings,                 # Used for handling missing data in data cleanup
+      # Missings,                 # Used for handling missing data in data cleanup
       Optim,                    # Used to minimize objective function for mass balance reconciliations (replace with JuMP?)
       OrderedCollections,       # Used for OrderedDict
       PrecompileTools,          # Used to do additional precompilation for faster start-up

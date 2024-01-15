@@ -54,7 +54,7 @@ expidite the addition of streams using the internal TimeArray objects.
 
 It is recommended to rather create StreamHistory objects via readstreamhistory().
 """
-function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
+function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false; status = measured)
     numcomps = length(comps)
     numdata = size(flowdata, 1)
 
@@ -123,7 +123,7 @@ function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
     atomflows_ta = TimeArray(timestamps, atomflows, [:atomflows])
     
 
-    return Stream(name, numdata, complist, massflows_ta, moleflows_ta, totalmassflows_ta, atomflows_ta)
+    return Stream(name, status, numdata, complist, massflows_ta, moleflows_ta, totalmassflows_ta, atomflows_ta)
 end
 
 
@@ -462,11 +462,11 @@ end
 
 
 """
-    fixedstream(list::StreamList, name::String, flow<:Real)
-
+    fixedstream(list::StreamList, name::String, flow<:Realfixedstream(list::StreamList, name::String, flow::Float64)
+    
 Returns a stream with the same components and timestamp as the specified StreamList and all flows set to a specified constant value. 
 """
-function fixedstream(list::StreamList, name::String, flow<:Real)
+function fixedstream(list::StreamList, name::String, flow::Float64)
     # Take the first stream in the StreamList as a reference
     refstrm = first(list).second
 

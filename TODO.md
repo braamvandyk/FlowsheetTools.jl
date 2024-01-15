@@ -5,6 +5,7 @@
  - Add change point detection and stationarity checks to isolate (pseudo)steady states
  - Define unit tests for CI at some future point
  - Add a stoichiometric reactor to unitops
+ - Don't limit the length of pretty table outputs.
 
  ### Data clean-up
   - Should be a separate step, before reconciliation
