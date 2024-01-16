@@ -466,11 +466,12 @@ end
     
 Returns a stream with the same components and timestamp as the specified StreamList and all flows set to a specified constant value. 
 """
-function fixedstream(list::StreamList, name::String, flow::Float64)
+function fixedstream(list::StreamList, name::String, flows::Array{Float64}, ismoleflow=false)
     # Take the first stream in the StreamList as a reference
     refstrm = first(list).second
 
-    return Stream(name, refstrm.complist, string.(colnames(refstrm.massflows)), timestamp(refstrm.massflows), flow .* ones(size(refstrm.massflows)))
+    flowdata = repeat(flows', outer = length(timestamp(refstrm.massflows)))
+    return Stream(name, refstrm.complist, string.(colnames(refstrm.massflows)), timestamp(refstrm.massflows), flowdata, ismoleflow)
 end
 
 

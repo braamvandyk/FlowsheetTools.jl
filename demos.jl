@@ -202,6 +202,9 @@ sysstreams["Product1b"] = emptystream(sysstreams, "Product1b");
 sysstreams["Product2"] = emptystream(sysstreams, "Product2");
 sysstreams["Product3"] = emptystream(sysstreams, "Product3");
 
+# Let's also add a dummy stream with a fixed composition. We don't need it here, but it is easy to do
+sysstreams["Dummy"] = fixedstream(sysstreams, "Dummy", [10.0, 0.0, 0.0, 0.0, 0.1])
+
 # A flow splitter that splits 50% of the product to each of Product1 and Product2. These streams will have identcal compositions
 
 @unitop begin
@@ -285,6 +288,9 @@ sysstreams["Product1a"] = emptystream(sysstreams, "Product1a");
 sysstreams["Product1b"] = emptystream(sysstreams, "Product1b");
 sysstreams["Product2"] = emptystream(sysstreams, "Product2");
 sysstreams["Product3"] = emptystream(sysstreams, "Product3");
+
+# And just to show what happens when we create a fixed composition stream when the streams in the StreamList have time series data
+sysstreams["Dummy"] = fixedstream(sysstreams, "Dummy", [10.0, 0.0, 0.0, 0.0, 0.1])
 
 # Empty the unit operation list as well, so we start fresh.
 
