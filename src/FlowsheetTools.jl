@@ -4,7 +4,7 @@ export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomp
         Stream, StreamList, @stream, copystream!, deletestream!, renamestream!, renamestream, emptystream, fixedstream, readstreamhistory, refreshcomplist,
         UnitOp, UnitOpList, @unitop, mixer!, flowsplitter!, componentplitter!,
         BalanceBoundary, @boundary, showdata, 
-        calccorrections, closemb_simple,
+        calccorrections, calccorrections_anchor, closemb_simple, closemb_anchor,
         conversion, molar_selectivity,
         Flowsheet, addunitop!, setorder!, generateBFD
 
