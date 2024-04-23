@@ -92,7 +92,7 @@ end
 
 
 """
-    function calccorrections(boundary::BalanceBoundary, anchor::String; totalweight=1.0, elementweight=1.0)
+    function calccorrections(boundary::BalanceBoundary; totalweight=1.0, elementweight=1.0)
 
 Basic mass balance reconciliation. Error in total mass closure and average element closures are
 weighted by *totalweight* and *elementweight* respectively and the squared weighted error is minimized.
@@ -134,14 +134,13 @@ function calccorrections(boundary::BalanceBoundary; totalweight=1.0, elementweig
                 end
             end
         end
-        totalerr = totalweight*masserror + elementweight*atomerror + λ*sum(abs2, factors)
+        totalerr = totalweight*masserror + elementweight*atomerror + λ*sum(abs2, 1.0 .- factors)
         return totalerr
     end
 
-    res = optimize(f, factors, BFGS())
+    res = optimize(f, factors, LBFGS())
     # res = optimize(f, factors)
-    _optfactors = res.minimizer
-    optfactors = vcat(_optfactors[1:anchorindex-1], 1.0, _optfactors[anchorindex:end])
+    optfactors = res.minimizer
 
     i = 1
     for stream in inlets
@@ -158,7 +157,7 @@ end
 
 
 """
-    function closemb_anchor(boundary::BalanceBoundary, [corrections::Dict{String, Float64}])
+    function closemb_anchor(boundary::BalanceBoundary; corrections=nothing, anchor=nothing, totalweight=1.0, elementweight=1.0)
 
 Apply the mass balance reconciliation. The corrections can first calculated using `calccorrections`
 and can then be applied to multiple boundaries using this function. If no corrections are passed,
@@ -198,7 +197,6 @@ Since balance boundaries are immutable, a new boundary instance is returned.
 """
 function closemb_simple(boundary::BalanceBoundary; corrections=nothing, anchor=nothing, totalweight=1.0, elementweight=1.0, λ=0.1)
     if isnothing(corrections)
-        isnothing(anchor) && throw(ArgumentError("an anchor stream must be specified"))
         corrections = calccorrections(boundary; totalweight, elementweight, λ)
     end
 
