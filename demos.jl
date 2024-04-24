@@ -392,19 +392,24 @@ end b sysunitops
 # We can request the correction factors, without applying them.
 corrections = calccorrections(b)
 
+# The previous example uses a constant weight for all elements, but we can specifiy individual weights as well.
+
+weights = Dict(["H" => 1.0, "C" => 1.5, "O" => 1.0, "Ar" => 0.0, "N" => 0.0])
+corrections2 = calccorrections(b, setelements=true, elementweights=weights)
+
 # `calccorrections` takes a boundary for which to calculate the correction factors, and then optional weights for the total mass balance error and the elemental errors.
 # These latter values default to 1.0 each. It uses [Ridge Regression](https://www.ibm.com/topics/ridge-regression?_sm_au_=iF5HM658VZnjn6Sr0GLqHKHB1jtC6) with a default λ = 0.1
 # 
-#   `function calccorrections(boundary::BalanceBoundary, anchor::String; totalweight=1.0, elementweight=1.0, λ = 0.1)`
-
-
-# We can apply the corrections, with `closemb_simple()`, which will either take a `Dict` of correction factors, or calculate them automatically, if not specified.
-
-b2 = closemb_simple(b)
+#   function calccorrections_anchor(boundary::BalanceBoundary, anchor::String; totalweight=1.0, elementweight = 1.0, 
+#         setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}())
 
 # An alternative option is to use an anchor stream, rather than Ridge Regression. The correction factor for the anchor stream will be 1.0, i.e. there is no adjustment.
 
 corrections_a = calccorrections_anchor(b, "eProduct")
+
+# Or again, with inidividual element weights
+
+corrections_a = calccorrections_anchor(b, "eProduct", setelements=true, elementweights=weights)
 
 # `calccorrections_anchor` takes a boundary for which to calculate the correction factors, an anchor stream, for which the correction is always 1.0 - no change, and then optional weights for the total mass balance error and the elemental errors.
 # These latter values default to 1.0 each.
@@ -412,14 +417,16 @@ corrections_a = calccorrections_anchor(b, "eProduct")
 #   `function calccorrections(boundary::BalanceBoundary, anchor::String; totalweight=1.0, elementweight=1.0)`
 #
 
-# We can apply these corrections, with `closemb_anchor()`, which will either take a `Dict` of correction factors, or calculate them automatically, if not specified.
-# In the latter case, the anchor stream must also be passed - as a keyword argument.
+# We can apply the corrections, with `closemb()`, which will take a `Dict` of correction factors.
 
-b3 = closemb_anchor(b, anchor = "eProduct")
+b2 = closemb(b, corrections)
+b3 = closemb(b, corrections_a)
+
 
 # Let's compare the raw and reconciled closures:
 
 (mean(values(b.closure)), mean(values(b2.closure)), mean(values(b3.closure)))
+
 
 # We can also request some information from a bounary. This is given in table form, packed into a string.
 

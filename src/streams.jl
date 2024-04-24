@@ -477,7 +477,7 @@ end
 
 """
 
-    readstreamhistory(filename, streamname, complist)
+function readstreamhistory(filename, streamname, complist; ismoleflow=false)
 
 Reads in a stream history file (CSV file).
 
@@ -496,6 +496,25 @@ function readstreamhistory(filename, streamname, complist; ismoleflow=false)
     timestamps = DateTime.(data[:, 1], "yyyy/mm/dd HH:MM")
 
     return Stream(streamname, complist, comps, timestamps, flows, ismoleflow)
+end
+
+
+"""
+
+    writestreamhistory(filename, streamname)
+
+Writes in a stream history file (CSV file).
+
+
+"""
+function writestreamhistory(stream, filename, moleflow=false)
+    if moleflow
+        writetimearray(stream.moleflows, filename)
+    else
+        writetimearray(stream.massflows, filename)
+    end
+
+    return nothing
 end
 
 
