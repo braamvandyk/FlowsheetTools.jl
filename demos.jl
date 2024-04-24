@@ -427,6 +427,9 @@ b3 = closemb(b, corrections_a)
 
 (mean(values(b.closure)), mean(values(b2.closure)), mean(values(b3.closure)))
 
+# We can now write corrected streams back to file
+
+writestreamhistory(sysstreams["C2"], "corrected.csv")
 
 # We can also request some information from a bounary. This is given in table form, packed into a string.
 
