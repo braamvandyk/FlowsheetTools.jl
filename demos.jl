@@ -392,6 +392,15 @@ end b sysunitops
 # We can request the correction factors, without applying them.
 corrections = calccorrections(b)
 
+
+# We can also pass through a custom additional error function to minimize.
+# We have a custom function that receives a dictionary of the correction factors and can do any arbitrary calculation.
+# The retured value is added to the weighted square errors of the total mass and element balances.
+# You can, for example, add distance from equilibrium for a reaction to the reconciliation.
+
+myerr(factorDict) = 100.0 * sum(abs2, 1.0 .- values(factorDict))
+corrections = calccorrections(b, myerr)
+
 # The previous example uses a constant weight for all elements, but we can specifiy individual weights as well.
 
 weights = Dict(["H" => 1.0, "C" => 1.5, "O" => 1.0, "Ar" => 0.0, "N" => 0.0])
@@ -406,6 +415,7 @@ corrections2 = calccorrections(b, setelements=true, elementweights=weights)
 # An alternative option is to use an anchor stream, rather than Ridge Regression. The correction factor for the anchor stream will be 1.0, i.e. there is no adjustment.
 
 corrections_a = calccorrections_anchor(b, "eProduct")
+corrections_a = calccorrections_anchor(b, "eProduct", myerr)
 
 # Or again, with inidividual element weights
 

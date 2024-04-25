@@ -15,7 +15,7 @@ weighted by *totalweight* and *elementweight* respectively and the squared weigh
 
 Results are returned as a dict of streams and corrections to their flows.
 """
-function calccorrections_anchor(boundary::BalanceBoundary, anchor::String; totalweight=1.0, elementweight = 1.0, 
+function calccorrections_anchor(boundary::BalanceBoundary, anchor::String, customerror=nothing; totalweight=1.0, elementweight = 1.0, 
     setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}()) 
     # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
@@ -74,6 +74,7 @@ function calccorrections_anchor(boundary::BalanceBoundary, anchor::String; total
             end
         end
         totalerr = totalweight*masserror + atomerror
+        !isnothing(customerror) && (totalerr += customerror(factors))
         return totalerr
     end
 
@@ -106,7 +107,7 @@ weighted by *totalweight* and *elementweight* respectively and the squared weigh
 
 Results are returned as a dict of streams and corrections to their flows.
 """
-function calccorrections(boundary::BalanceBoundary; totalweight=1.0, elementweight = 1.0, 
+function calccorrections(boundary::BalanceBoundary, customerror=nothing; totalweight=1.0, elementweight = 1.0, 
     setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}(), λ = 0.1)
     # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
@@ -116,6 +117,7 @@ function calccorrections(boundary::BalanceBoundary; totalweight=1.0, elementweig
 
     inlets = boundary.inlets
     outlets = boundary.outlets
+    streamnames = vcat(inlets, outlets)
 
     ins = length(inlets)
     outs = length(outlets)
@@ -148,6 +150,10 @@ function calccorrections(boundary::BalanceBoundary; totalweight=1.0, elementweig
             end
         end
         totalerr = totalweight*masserror + atomerror + λ*sum(abs2, 1.0 .- factors)
+        if !isnothing(customerror)
+            calldict = Dict(zip(streamnames, factors))
+            totalerr += customerror(calldict)
+        end
         return totalerr
     end
 
