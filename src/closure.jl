@@ -99,76 +99,15 @@ end
 
 
 """
-    function calccorrections(boundary::BalanceBoundary; totalweight=1.0, elementweight = 1.0, 
+function calccorrections(boundarylist::BoundaryList, customerror=nothing; totalweight=1.0, elementweight = 1.0, 
         setelements = false, elementweights::Dict{String, Float64}= Dict{String, Float64}, λ = 0.1)
 
 Basic mass balance reconciliation. Error in total mass closure and average element closures are
 weighted by *totalweight* and *elementweight* respectively and the squared weighted error is minimized.
+If *setelements* is true, the dictionary of weights for each element is applied, rather than value of *elementweights*.
 
 Results are returned as a dict of streams and corrections to their flows.
 """
-function calccorrections(boundary::BalanceBoundary, customerror=nothing; totalweight=1.0, elementweight = 1.0, 
-    setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}(), λ = 0.1)
-    # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
-    # all of the unit ops must have the same stream list
-    streamlist = first(boundary.unitlist.list).second.streamlist  
-     
-    corrections = Dict{String, Float64}()
-
-    inlets = boundary.inlets
-    outlets = boundary.outlets
-    streamnames = vcat(inlets, outlets)
-
-    ins = length(inlets)
-    outs = length(outlets)
-
-    factors = ones(ins + outs)
-
-    numdata = streamlist[inlets[1]].numdata
-    
-    function f(factors)
-        # Since inlets and outlets are arrays of Stream, summing them produces Stream objects
-        total_in = sum(factors[1:ins] .* streamlist[inlets])
-        total_out = sum(factors[ins+1:end] .* streamlist[outlets])
-        
-        masserrors = (total_out.totalmassflow ./ total_in.totalmassflow) .- 1.0
-        masserror = sum(abs2, values(masserrors))
-        
-        atomerror = 0.0
-        for datum = 1:numdata           
-            for atom in keys(values(total_in.atomflows)[datum])
-                inflow = values(total_in.atomflows)[datum][atom]
-                if inflow > 0.0
-                    if setelements
-                        aweight = !(atom ∈ keys(elementweights)) ? 0.0 : elementweights[atom]
-                    else
-                        aweight = aweight = elementweight
-                    end
-                    outflow = values(total_out.atomflows)[datum][atom]
-                    atomerror += aweight * abs2(outflow/inflow - 1.0)
-                end
-            end
-        end
-        totalerr = totalweight*masserror + atomerror + λ*sum(abs2, 1.0 .- factors)
-        if !isnothing(customerror)
-            calldict = Dict(zip(streamnames, factors))
-            totalerr += customerror(calldict)
-        end
-        return totalerr
-    end
-
-    res = optimize(f, factors, LBFGS())
-    # res = optimize(f, factors)
-    optfactors = res.minimizer
-
-
-    corrections = Dict(zip(vcat(inlets, outlets), optfactors))
-
-    return corrections
-end
-
-# #=
-
 function calccorrections(boundarylist::BoundaryList, customerror=nothing; totalweight=1.0, elementweight = 1.0, 
     setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}(), λ = 0.1)
     # Pull the streamlist of the first unit op in first boundary in the list. Since this is from a UnitOpList,
@@ -264,8 +203,6 @@ function calccorrections(boundarylist::BoundaryList, customerror=nothing; totalw
 
     return corrections
 end
-
-# =#
 
 
 """
