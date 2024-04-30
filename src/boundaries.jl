@@ -5,6 +5,8 @@
 #----------------------------------------------------------------------------
 
 struct BalanceBoundary
+    name::String
+
     # Units included in the boundary
     unitlist::UnitOpList
     units::Vector{String}
@@ -29,12 +31,17 @@ struct BalanceBoundary
 
     # Internal constructor to ensurte that all inlets and outlets have the same number of historic data points
     # and identical timestamps. It is only required here in case the user doesn't use the outer constructor
-    function BalanceBoundary(unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
+    function BalanceBoundary(name, unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
         total_in.numdata != total_out.numdata && throw(DimensionMismatch("all in/outlets must must have similar history lengths."))
         !all(timestamp(total_in.massflows) .== timestamp(total_out.massflows)) && throw(DimensionMismatch("all in/outlets must must have identical timestamps."))
-        new(unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
+        new(name, unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
     end
 end
+
+struct BoundaryList
+    list::OrderedDict{String, Stream}
+end
+
 
 
 #----------------------------------------------------------------------------
@@ -55,7 +62,7 @@ Will error if there are either no inlets or outlets.
 Since not all atoms referenced in the streams will be present, closures for atoms not present will be indicated by
 setting the values to -1.0
 """
-function BalanceBoundary(unitlist::UnitOpList, units::Vector{String})
+function BalanceBoundary(name, unitlist::UnitOpList, units::Vector{String})
     # Get the streams that cross the boundary
     inlets, outlets, _ = boundarystreams(unitlist, units)
 
@@ -95,7 +102,18 @@ function BalanceBoundary(unitlist::UnitOpList, units::Vector{String})
         atomclosures[datum] = _atomclosures
     end
     atomclosures_ta = TimeArray(timestamp(closure), atomclosures, [Symbol("Elemental Closures")])
-    BalanceBoundary(unitlist, units, numdata, inletnames, outletnames, total_in, total_out, closure, atomclosures_ta)
+    BalanceBoundary(name, unitlist, units, numdata, inletnames, outletnames, total_in, total_out, closure, atomclosures_ta)
+end
+
+
+"""
+    Boundarylist()
+
+Constructor for an empty boundary list. Boundaries are added when created via the @boundary macro
+"""
+function BoundaryList()
+    l = OrderedDict{String, Stream}()
+    return BoundaryList(l)
 end
 
 
@@ -104,6 +122,45 @@ end
 #----Base overloads----------------------------------------------------------
 #
 #----------------------------------------------------------------------------
+
+
+function Base.setindex!(A::BoundaryList, X::Boundary, idx::String)
+    if length(A.list) == 0
+        A.list[idx] = X
+    else
+        # Verify that all the streams reference the same UnitOpList.
+        # Get the first item in the `list` field. As `list` is a `Dict`, this returns a `Pair`.
+        # We get the value entry using the `second` field of the `Pair`, which returns a `Stream`,
+        # of which we get the `complist` field.
+        currentlist = first(A.list).second.unitlist
+        current_ts = timestamp(first(A.list).second.massflows)
+
+        X.unitlist != currentlist && throw(ArgumentError("all boundaries in BoundaryList must reference the same UnitOpList"))
+
+        A.list[idx] = X
+    end
+
+    return nothing
+end
+
+
+function Base.getindex(A::BoundaryList, idx::String)
+    return A.list[idx]
+end
+
+
+function Base.getindex(A::BoundaryList, idxs::Vector{String})
+    res = Boundary[]
+    for idx in idxs
+        push!(res, A.list[idx])
+    end
+    return res
+end
+
+
+function Base.length(A::BoundaryList)
+    return length(A.list)
+end
 
 
 # Pretty printing for BalanceBoundary objects
@@ -123,6 +180,20 @@ function Base.show(io::IO, b::BalanceBoundary)
 end
 
 
+function  Base.show(io::IO, bl::BoundaryList)
+    println(io, "Boundary list:")
+    println(io)
+    println(io, "Boundaries:")
+    if length(bl.list) > 0
+        for (name, _) in bl
+            println(io, "  ", name)
+        end 
+    else
+        println(io, "\tEmpty list")
+    end
+end
+
+
 #----------------------------------------------------------------------------
 #
 #----Macros------------------------------------------------------------------
@@ -132,17 +203,17 @@ end
 """
     @boundary begin
         unitops --> ["Reactor", "Membrane"]
-    end b1 sysunitops
+    end b1 sysunitops sysboundaries
 
-Create a boundary, b1, that includes UnitOps "Reactor" amd "Membrane" from the UnitOpsList sysunitops.
+Create a boundary, b1, that includes UnitOps "Reactor" amd "Membrane" from the UnitOpsList sysunitops and add it to BoundaryList sysboundaries.
 
     @boundaryhist begin
         unitops --> ["RX101"]
-    end b2 sysunitstops
+    end b2 sysunitstops sysboundaries
 
-Create a boundary, b2, that includes UnitOps "RX101" from the UnitOpsList sysunitops.
+Create a boundary, b2, that includes UnitOps "RX101" from the UnitOpsList sysunitops and add it to BoundaryList sysboundaries.
 """
-macro boundary(ex::Expr, name::Symbol, unitoplist::Symbol)      
+macro boundary(ex::Expr, name::Symbol, unitoplist::Symbol, boundarylist::Symbol)      
     local unitops = String[]
     
     for line in ex.args
@@ -154,7 +225,7 @@ macro boundary(ex::Expr, name::Symbol, unitoplist::Symbol)
         end
     end
 
-    return :($(esc(name)) = BalanceBoundary($(esc(unitoplist)), $unitops))
+    return :($(esc(boundarylist))[name] = BalanceBoundary($(esc(unitoplist)), $unitops))
 end
 
 

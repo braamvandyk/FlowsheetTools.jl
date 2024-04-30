@@ -129,7 +129,7 @@ end
 
 
 """
-    Streamlist()
+    StreamList()
 
 Constructor for an empty stream list. Streams are added when created via the @stream macro or
 when read from file with readstreamhistory()
