@@ -161,22 +161,115 @@ function calccorrections(boundary::BalanceBoundary, customerror=nothing; totalwe
     # res = optimize(f, factors)
     optfactors = res.minimizer
 
-    i = 1
-    for stream in inlets
-        corrections[stream] = optfactors[i]
-        i += 1
-    end
-    for stream in outlets
-        corrections[stream] = optfactors[i]
-        i += 1
-    end
+
+    corrections = Dict(zip(vcat(inlets, outlets), optfactors))
 
     return corrections
 end
 
+# #=
+
+function calccorrections(boundaries::Array{BalanceBoundary}, customerror=nothing; totalweight=1.0, elementweight = 1.0, 
+    setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}(), λ = 0.1)
+    # Pull the streamlist of the first unit op in first boundary in the list. Since this is from a UnitOpList,
+    # all of the unit ops must have the same stream list
+    streamlist = first(first(boundaries).unitlist.list).second.streamlist  
+     
+    allinlets = Vector{Vector{String}}(undef, length(boundaries))
+    alloutlets = Vector{Vector{String}}(undef, length(boundaries))
+    allstreams  = String[]
+
+    allins = Int64[]
+    allouts = Int64[]
+
+    for (i, boundary) in enumerate(boundaries)
+        allstreams = vcat(allstreams, boundary.inlets)
+        allstreams = vcat(allstreams, boundary.outlets)
+        allinlets[i] = boundary.inlets
+        alloutlets[i] = boundary.outlets
+        push!(allins, length(boundary.inlets))
+        push!(allouts, length(boundary.outlets))
+    end
+    sort!(allstreams)
+    unique!(allstreams)
+
+    allfactors = ones(length(allstreams))
+
+    numdata = streamlist[allinlets[1][1]].numdata
+
+
+    function calcerr(boundarynum, allfactors)
+
+        function f(factors)
+            # Since inlets and outlets are arrays of Stream, summing them produces Stream objects
+            total_in = sum(factors[1:ins] .* streamlist[inlets])
+            total_out = sum(factors[ins+1:end] .* streamlist[outlets])
+            
+            masserrors = (total_out.totalmassflow ./ total_in.totalmassflow) .- 1.0
+            masserror = sum(abs2, values(masserrors))
+            
+            atomerror = 0.0
+            for datum = 1:numdata           
+                for atom in keys(values(total_in.atomflows)[datum])
+                    inflow = values(total_in.atomflows)[datum][atom]
+                    if inflow > 0.0
+                        if setelements
+                            aweight = !(atom ∈ keys(elementweights)) ? 0.0 : elementweights[atom]
+                        else
+                            aweight = aweight = elementweight
+                        end
+                        outflow = values(total_out.atomflows)[datum][atom]
+                        atomerror += aweight * abs2(outflow/inflow - 1.0)
+                    end
+                end
+            end
+            totalerr = totalweight*masserror + atomerror + λ*sum(abs2, 1.0 .- factors)
+    
+            return totalerr
+        end
+
+        ins =  allins[boundarynum]
+        outs = allouts[boundarynum]
+        inlets = allinlets[boundarynum]
+        outlets = alloutlets[boundarynum]
+        
+        factoridx_in = findall(x -> x in inlets, allstreams)
+        factoridx_out = findall(x -> x in outlets, allstreams)
+
+        factors = allfactors[vcat(factoridx_in, factoridx_out)]
+
+        return f(factors)
+    end
+
+    function g(allfactors)
+        totalerr = 0.0
+
+        for boundarynum in eachindex(boundaries)
+            totalerr += calcerr(boundarynum, allfactors)
+        end
+
+        if !isnothing(customerror)
+            calldict = Dict(zip(allstreams, allfactors))
+            totalerr += customerror(calldict)
+        end
+
+        return totalerr
+    end
+
+
+    res = optimize(g, allfactors, LBFGS())
+    optfactors = res.minimizer
+
+    corrections = Dict(zip(allstreams, optfactors))
+
+    return corrections
+end
+
+# =#
+
 
 """
-    function closemb_anchor(boundary::BalanceBoundary; corrections=nothing, anchor=nothing, totalweight=1.0, elementweight=1.0)
+    function closemb(boundary::BalanceBoundary; corrections=nothing, anchor=nothing, totalweight=1.0, elementweight=1.0)
 
 Apply the mass balance reconciliation. The corrections can first calculated using `calccorrections`
 and can then be applied to multiple boundaries using this function. If no corrections are passed,
@@ -199,3 +292,5 @@ function closemb(boundary::BalanceBoundary, corrections::Dict{String, Float64})
 
     return newboundary
 end
+
+
