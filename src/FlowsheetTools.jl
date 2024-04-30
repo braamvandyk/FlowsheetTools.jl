@@ -3,8 +3,8 @@ module FlowsheetTools
 export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomponentlist!, names,
         Stream, StreamList, @stream, copystream!, deletestream!, renamestream!, renamestream, emptystream, fixedstream, readstreamhistory, writestreamhistory, refreshcomplist,
         UnitOp, UnitOpList, @unitop, mixer!, flowsplitter!, componentplitter!,
-        BalanceBoundary, @boundary, showdata, 
-        calccorrections, calccorrections_anchor, closemb,
+        BalanceBoundary, BoundaryList, @boundary, showdata, 
+        calccorrections, calccorrections_anchor, closemb!,
         conversion, molar_selectivity,
         Flowsheet, addunitop!, setorder!, generateBFD
 

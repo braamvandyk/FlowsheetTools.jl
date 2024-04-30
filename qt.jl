@@ -59,29 +59,30 @@ sysunitops["Mixer2"]()
 
 sysstreams["Product"] ≈ sysstreams["Product3"]
 
-@boundary begin
-    unitops --> ["Mixer", "Reactor"]
-end b sysunitops
 
-b.atomclosures
-
-b.closure
-
-fs = Flowsheet(sysunitops, ["Mixer", "Reactor", "ProductSplitter", "ComponentSplitter", "Mixer2"], [1, 2, 3, 4, 5])
-generateBFD(fs, "./myflowsheet.svg")
+# fs = Flowsheet(sysunitops, ["Mixer", "Reactor", "ProductSplitter", "ComponentSplitter", "Mixer2"], [1, 2, 3, 4, 5])
+# generateBFD(fs, "./myflowsheet.svg")
 
 sysstreams["Mixed"] = 1.1*sysstreams["Mixed"]
 
+
+
+
+sysboundaries = BoundaryList()
+
 @boundary begin
     unitops --> ["Mixer"]
-end b1 sysunitops
+end "B1" sysunitops sysboundaries
 
 @boundary begin
     unitops --> ["Reactor", "ProductSplitter"]
-end b2 sysunitops
+end "B2" sysunitops sysboundaries
 
-boundaries = [b1, b2]
+sysboundaries["B1"]
+sysboundaries["B2"]
 
-corrections = calccorrections(boundaries)
-b1 = closemb(b1, corrections)
-b2
+corrections = calccorrections(sysboundaries; λ = 0.0)
+closemb!(sysboundaries, corrections)
+
+sysboundaries["B1"]
+sysboundaries["B2"]

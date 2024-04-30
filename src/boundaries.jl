@@ -39,7 +39,7 @@ struct BalanceBoundary
 end
 
 struct BoundaryList
-    list::OrderedDict{String, Stream}
+    list::OrderedDict{String, BalanceBoundary}
 end
 
 
@@ -52,7 +52,7 @@ end
 
 
 """
-    BalanceBoundary(unitlist, units)
+    BalanceBoundary(name, unitlist, units)
 
 Constructor for a BalanceBoundary. Inputs are a UnitOpList and and array of names of `UnitOp`s in the list
 that are inside the boundary. Inlet and outlet streams crossing the boundary are automatically calculated.
@@ -62,7 +62,7 @@ Will error if there are either no inlets or outlets.
 Since not all atoms referenced in the streams will be present, closures for atoms not present will be indicated by
 setting the values to -1.0
 """
-function BalanceBoundary(name, unitlist::UnitOpList, units::Vector{String})
+function BalanceBoundary(name::String, unitlist::UnitOpList, units::Vector{String})
     # Get the streams that cross the boundary
     inlets, outlets, _ = boundarystreams(unitlist, units)
 
@@ -97,7 +97,7 @@ function BalanceBoundary(name, unitlist::UnitOpList, units::Vector{String})
         for atom in keys(values(total_in.atomflows)[datum])
             in = values(total_in.atomflows)[datum][atom]
             out = values(total_out.atomflows)[datum][atom]
-            _atomclosures[atom] = (in == 0.0) ? -1.0 : out/in
+            _atomclosures[atom] = (out == 0.0) ? 0.0 : ((in == 0.0) ? -1.0 : out/in)
         end
         atomclosures[datum] = _atomclosures
     end
@@ -124,7 +124,7 @@ end
 #----------------------------------------------------------------------------
 
 
-function Base.setindex!(A::BoundaryList, X::Boundary, idx::String)
+function Base.setindex!(A::BoundaryList, X::BalanceBoundary, idx::String)
     if length(A.list) == 0
         A.list[idx] = X
     else
@@ -133,7 +133,6 @@ function Base.setindex!(A::BoundaryList, X::Boundary, idx::String)
         # We get the value entry using the `second` field of the `Pair`, which returns a `Stream`,
         # of which we get the `complist` field.
         currentlist = first(A.list).second.unitlist
-        current_ts = timestamp(first(A.list).second.massflows)
 
         X.unitlist != currentlist && throw(ArgumentError("all boundaries in BoundaryList must reference the same UnitOpList"))
 
@@ -150,7 +149,7 @@ end
 
 
 function Base.getindex(A::BoundaryList, idxs::Vector{String})
-    res = Boundary[]
+    res = BalanceBoundary[]
     for idx in idxs
         push!(res, A.list[idx])
     end
@@ -194,6 +193,15 @@ function  Base.show(io::IO, bl::BoundaryList)
 end
 
 
+function Base.iterate(A::BoundaryList)
+    return iterate(A.list)
+end
+
+
+function Base.iterate(A::BoundaryList, state)
+    return iterate(A.list, state)
+end
+
 #----------------------------------------------------------------------------
 #
 #----Macros------------------------------------------------------------------
@@ -213,7 +221,7 @@ Create a boundary, b1, that includes UnitOps "Reactor" amd "Membrane" from the U
 
 Create a boundary, b2, that includes UnitOps "RX101" from the UnitOpsList sysunitops and add it to BoundaryList sysboundaries.
 """
-macro boundary(ex::Expr, name::Symbol, unitoplist::Symbol, boundarylist::Symbol)      
+macro boundary(ex::Expr, name::String, unitoplist::Symbol, boundarylist::Symbol)      
     local unitops = String[]
     
     for line in ex.args
@@ -225,7 +233,7 @@ macro boundary(ex::Expr, name::Symbol, unitoplist::Symbol, boundarylist::Symbol)
         end
     end
 
-    return :($(esc(boundarylist))[name] = BalanceBoundary($(esc(unitoplist)), $unitops))
+    return :($(esc(boundarylist))[$name] = BalanceBoundary($name, $(esc(unitoplist)), $unitops))
 end
 
 

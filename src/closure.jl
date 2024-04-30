@@ -169,26 +169,26 @@ end
 
 # #=
 
-function calccorrections(boundaries::Array{BalanceBoundary}, customerror=nothing; totalweight=1.0, elementweight = 1.0, 
+function calccorrections(boundarylist::BoundaryList, customerror=nothing; totalweight=1.0, elementweight = 1.0, 
     setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}(), λ = 0.1)
     # Pull the streamlist of the first unit op in first boundary in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
-    streamlist = first(first(boundaries).unitlist.list).second.streamlist  
-     
-    allinlets = Vector{Vector{String}}(undef, length(boundaries))
-    alloutlets = Vector{Vector{String}}(undef, length(boundaries))
+    firstboundary = first(values(boundarylist.list))
+    streamlist = first(firstboundary.unitlist.list).second.streamlist  
+    allinlets = Vector{Vector{String}}(undef, length(boundarylist))
+    alloutlets = Vector{Vector{String}}(undef, length(boundarylist))
     allstreams  = String[]
 
     allins = Int64[]
     allouts = Int64[]
 
-    for (i, boundary) in enumerate(boundaries)
-        allstreams = vcat(allstreams, boundary.inlets)
-        allstreams = vcat(allstreams, boundary.outlets)
-        allinlets[i] = boundary.inlets
-        alloutlets[i] = boundary.outlets
-        push!(allins, length(boundary.inlets))
-        push!(allouts, length(boundary.outlets))
+    for (i, boundary) in enumerate(boundarylist)
+        allstreams = vcat(allstreams, boundary.second.inlets)
+        allstreams = vcat(allstreams, boundary.second.outlets)
+        allinlets[i] = boundary.second.inlets
+        alloutlets[i] = boundary.second.outlets
+        push!(allins, length(boundary.second.inlets))
+        push!(allouts, length(boundary.second.outlets))
     end
     sort!(allstreams)
     unique!(allstreams)
@@ -244,7 +244,7 @@ function calccorrections(boundaries::Array{BalanceBoundary}, customerror=nothing
     function g(allfactors)
         totalerr = 0.0
 
-        for boundarynum in eachindex(boundaries)
+        for boundarynum in 1:length(boundarylist)
             totalerr += calcerr(boundarynum, allfactors)
         end
 
@@ -269,7 +269,7 @@ end
 
 
 """
-    function closemb(boundary::BalanceBoundary; corrections=nothing, anchor=nothing, totalweight=1.0, elementweight=1.0)
+    function closemb!(boundaries::BoundaryList; corrections::Dict{String, Float64})
 
 Apply the mass balance reconciliation. The corrections can first calculated using `calccorrections`
 and can then be applied to multiple boundaries using this function. If no corrections are passed,
@@ -277,20 +277,26 @@ and can then be applied to multiple boundaries using this function. If no correc
 
 Since balance boundaries are immutable, a new boundary instance is returned.
 """
-function closemb(boundary::BalanceBoundary, corrections::Dict{String, Float64})
+function closemb!(boundaries::BoundaryList, corrections::Dict{String, Float64})
     # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
-    streamlist = first(boundary.unitlist.list).second.streamlist  
+    firstboundary = first(values(boundaries.list))
+    unitlist = firstboundary.unitlist
+    streamlist = first(unitlist.list).second.streamlist
 
     # Apply the stream corrections
     for stream in keys(corrections)
         streamlist[stream] *= corrections[stream]
     end
 
-    #Recreate the boundary
-    newboundary = BalanceBoundary(boundary.unitlist, boundary.units)
+    #Recreate the boundaries
+    for b in boundaries
+        name = b.second.name
+        units = b.second.units
+        boundaries[name] = BalanceBoundary(name, unitlist, units)
+    end
 
-    return newboundary
+    return nothing
 end
 
 
