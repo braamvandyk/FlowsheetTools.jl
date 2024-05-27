@@ -108,20 +108,29 @@ If *setelements* is true, the dictionary of weights for each element is applied,
 
 Results are returned as a dict of streams and corrections to their flows.
 """
-function calccorrections(boundarylist::BoundaryList, customerror=nothing; totalweight=1.0, elementweight = 1.0, 
+function calccorrections(boundarylist::BoundaryList; customerror=nothing, anchor = nothing, totalweight=1.0, elementweight = 1.0, 
     setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}(), λ = 0.1)
+
+
     # Pull the streamlist of the first unit op in first boundary in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
     firstboundary = first(values(boundarylist.list))
     streamlist = first(firstboundary.unitlist.list).second.streamlist  
+
+    # Places to store names on inlets and outlets for each boundary
     allinlets = Vector{Vector{String}}(undef, length(boundarylist))
     alloutlets = Vector{Vector{String}}(undef, length(boundarylist))
-    allstreams  = String[]
-
+    
+    # Places to store counts of inlets and outlets for each boundary
     allins = Int64[]
     allouts = Int64[]
+    
+    # Place to store the names of all non-anchor streams
+    # This will be used to index into the correction factors vector
+    allstreams  = String[]
 
     for (i, boundary) in enumerate(boundarylist)
+        # boundary is a name => value pair from the boundary list, so use boundary.second to get the actual boundary object
         allstreams = vcat(allstreams, boundary.second.inlets)
         allstreams = vcat(allstreams, boundary.second.outlets)
         allinlets[i] = boundary.second.inlets
@@ -132,14 +141,25 @@ function calccorrections(boundarylist::BoundaryList, customerror=nothing; totalw
     sort!(allstreams)
     unique!(allstreams)
 
+    # Now exclude the anchor, if any
+    if !isnothing(anchor)
+        anchorindex = searchsorted(allstreams, anchor)
+        deleteat!(allstreams, anchorindex)
+    end
+    # Start off with all factors = 1, so no corrections
     allfactors = ones(length(allstreams))
 
     numdata = streamlist[allinlets[1][1]].numdata
 
 
-    function calcerr(boundarynum, allfactors)
+    function boundaryerror(boundarynum, allfactors)
+    # Extract the streams involved with this boundary, look up the relevant factors
+    # and then calculate the error from this boundary.
 
-        function f(factors)
+        function thiserror(factors)
+            # This function receives the factors for all streams, with the anchor set to one,
+            # if present. First inlets, then outlets.
+
             # Since inlets and outlets are arrays of Stream, summing them produces Stream objects
             total_in = sum(factors[1:ins] .* streamlist[inlets])
             total_out = sum(factors[ins+1:end] .* streamlist[outlets])
@@ -167,24 +187,43 @@ function calccorrections(boundarylist::BoundaryList, customerror=nothing; totalw
             return totalerr
         end
 
+        # Get this boundary's inlets and outlets
+        # ins and outs are the counts of inlets and outlets
         ins =  allins[boundarynum]
         outs = allouts[boundarynum]
+        # inlets and outlets are the names of the inlet and outlet streams
         inlets = allinlets[boundarynum]
         outlets = alloutlets[boundarynum]
-        
-        factoridx_in = findall(x -> x in inlets, allstreams)
-        factoridx_out = findall(x -> x in outlets, allstreams)
 
-        factors = allfactors[vcat(factoridx_in, factoridx_out)]
+        # Now get the factors for each stream [inlets outlets] and remember to set the anchor
+        # to one, if it is in this boundary
+        factors = Array{Float64}(undef, ins + outs)
+        for (index, inlet) in enumerate(inlets)
+            if inlet == anchor
+                factors[index] = 1.0
+            else
+                allstreams_index = findfirst(isequal(inlet), allstreams)
+                factors[index] = allfactors[allstreams_index]
+            end
+        end
+        for (index, outlet) in enumerate(outlets)
+            if outlet == anchor
+                factors[ins + index] = 1.0
+            else
+                allstreams_index = findfirst(isequal(outlet), allstreams)
+                factors[ins + index] = allfactors[allstreams_index]
+            end
+        end
 
-        return f(factors)
+
+        return thiserror(factors)
     end
 
-    function g(allfactors)
+    function loss(allfactors)
         totalerr = 0.0
 
         for boundarynum in 1:length(boundarylist)
-            totalerr += calcerr(boundarynum, allfactors)
+            totalerr += boundaryerror(boundarynum, allfactors)
         end
 
         if !isnothing(customerror)
@@ -196,7 +235,7 @@ function calccorrections(boundarylist::BoundaryList, customerror=nothing; totalw
     end
 
 
-    res = optimize(g, allfactors, LBFGS())
+    res = optimize(loss, allfactors, LBFGS())
     optfactors = res.minimizer
 
     corrections = Dict(zip(allstreams, optfactors))

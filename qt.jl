@@ -81,8 +81,8 @@ end "B2" sysunitops sysboundaries
 sysboundaries["B1"]
 sysboundaries["B2"]
 
-corrections = calccorrections(sysboundaries; λ = 0.0)
-closemb!(sysboundaries, corrections)
+corrections = calccorrections(sysboundaries; λ = 0.0, anchor = "H2")
+# closemb!(sysboundaries, corrections)
 
 sysboundaries["B1"]
 sysboundaries["B2"]
