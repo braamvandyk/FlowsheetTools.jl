@@ -235,7 +235,7 @@ function calccorrections(boundarylist::BoundaryList; customerror=nothing, anchor
     end
 
 
-    res = optimize(loss, allfactors, LBFGS())
+    res = optimize(loss, allfactors, BFGS())
     optfactors = res.minimizer
 
     corrections = Dict(zip(allstreams, optfactors))
