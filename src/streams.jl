@@ -6,11 +6,8 @@
 #
 #----------------------------------------------------------------------------
 
-# @enum StreamStatus measured unmeasured fixed
-
 struct Stream
     name::String
-    # status::StreamStatus
 
     # Number of historic data points
     numdata::Integer
@@ -55,7 +52,6 @@ expidite the addition of streams using the internal TimeArray objects.
 It is recommended to rather create StreamHistory objects via readstreamhistory().
 """
 function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
-# function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false; status = measured)
     numcomps = length(comps)
     numdata = size(flowdata, 1)
 
@@ -123,8 +119,6 @@ function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
     totalmassflows_ta = TimeArray(timestamps, totalmassflows, [:totalmassflows])
     atomflows_ta = TimeArray(timestamps, atomflows, [:atomflows])
     
-
-    # return Stream(name, status, numdata, complist, massflows_ta, moleflows_ta, totalmassflows_ta, atomflows_ta)
     return Stream(name, numdata, complist, massflows_ta, moleflows_ta, totalmassflows_ta, atomflows_ta)
 end
 
