@@ -14,6 +14,7 @@ sysstreams["Product1a"] = emptystream(sysstreams, "Product1a");
 sysstreams["Product1b"] = emptystream(sysstreams, "Product1b");
 sysstreams["Product2"] = emptystream(sysstreams, "Product2");
 sysstreams["Product3"] = emptystream(sysstreams, "Product3");
+sysstreams["Product4"] = emptystream(sysstreams, "Product4");
 
 sysstreams["Dummy"] = fixedstream(sysstreams, "Dummy", [10.0, 0.0, 0.0, 0.0, 0.1])
 
@@ -59,9 +60,17 @@ sysunitops["Mixer2"]()
 
 sysstreams["Product"] ≈ sysstreams["Product3"]
 
+@unitop begin
+    inlets --> ["Product3"]
+    outlets --> ["Product4"]
+    calc --> stoichiometric_reactor!
+    params --> [Reaction(["Ethane"], ["Ethylene", "Hydrogen"], [1.0], [1.0, 1.0], "Ethane", 0.5)]
+end "Reactor2" sysstreams sysunitops
+sysunitops["Reactor2"]()
 
-# fs = Flowsheet(sysunitops, ["Mixer", "Reactor", "ProductSplitter", "ComponentSplitter", "Mixer2"], [1, 2, 3, 4, 5])
-# generateBFD(fs, "./myflowsheet.svg")
+
+fs = Flowsheet(sysunitops, ["Mixer", "Reactor", "ProductSplitter", "ComponentSplitter", "Mixer2", "Reactor2"], [1, 2, 3, 4, 5, 6])
+generateBFD(fs, "./myflowsheet.svg")
 
 sysstreams["Mixed"] = 1.1*sysstreams["Mixed"]
 
