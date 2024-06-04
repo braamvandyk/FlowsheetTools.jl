@@ -25,7 +25,7 @@ using ArgCheck,                 # Replace simple @asserts with ArgCheck
       OrderedCollections,       # Used for OrderedDict
       PrecompileTools,          # Used to do additional precompilation for faster start-up
       PrettyTables,             # Used for pretty printing
-      RowEchelon,               # Used for rref
+      # RowEchelon,               # Used for rref
       Statistics,               # Basic statistical functions
       TimeSeries                # Used for TimeArray in Streams
 
