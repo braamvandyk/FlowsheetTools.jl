@@ -15,7 +15,7 @@ using ArgCheck,                 # Replace simple @asserts with ArgCheck
       Dates,                    # Used with all DateTime types
       DelimitedFiles,           # Used for reading stream histories
       Downloads,                # Used to pass Mermaid diagram definition to server
-      # HypothesisTests,          # Used for Augmented Dickey-Fuller test to see if data has a slop between changepoints
+      # HypothesisTests,          # Used for Augmented Dickey-Fuller test to see if data has a slope between changepoints
       Interpolations,           # Used for extrapolation to endpoints in cleaning up data
       InvertedIndices,          # Used for dropping selected rows and columns from matrices
       # Loess,                    # Used for smoothing and filling data sets

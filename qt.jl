@@ -60,11 +60,13 @@ sysunitops["Mixer2"]()
 
 sysstreams["Product"] ≈ sysstreams["Product3"]
 
+EthyleneHydrogenation(frac) = Reaction(syscomps, ["Ethylene", "Hydrogen"], ["Ethane"], [1.0, 1.0], [1.0], "Ethylene", frac)
+
 @unitop begin
     inlets --> ["Product3"]
     outlets --> ["Product4"]
     calc --> stoichiometric_reactor!
-    params --> [Reaction(["Ethane"], ["Ethylene", "Hydrogen"], [1.0], [1.0, 1.0], "Ethane", 0.5)]
+    params --> [EthyleneHydrogenation(0.5)]
 end "Reactor2" sysstreams sysunitops
 sysunitops["Reactor2"]()
 
@@ -91,7 +93,8 @@ sysboundaries["B1"]
 sysboundaries["B2"]
 
 corrections = calccorrections(sysboundaries; λ = 0.0, anchor = "H2")
-# closemb!(sysboundaries, corrections)
+closemb!(sysboundaries, corrections)
 
 sysboundaries["B1"]
 sysboundaries["B2"]
+

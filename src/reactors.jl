@@ -8,6 +8,8 @@
 
 
 struct Reaction
+    complist:: ComponentList
+
     reactants::Array{String}
     products::Array{String}
     reactcoeffs::Array{Float64}
@@ -22,6 +24,35 @@ end
 
 #----------------------------------------------------------------------------
 #
+#----Pretty Printing---------------------------------------------------------
+#
+#----------------------------------------------------------------------------
+
+
+function Base.show(io::IO, r::Reaction)
+    print(io, "Reaction:\t")
+    for (i, reactant) in enumerate(r.reactants)
+        print(io, r.reactcoeffs[i], " ", reactant)
+        if i < length(r.reactants)
+            print(io, " + ")
+        end
+    end
+    print(io, " --> ")
+    for (i, product) in enumerate(r.products)
+        print(io, r.prodcoeffs[i], " ", product)
+        if i < length(r.products)
+            print(io, " + ")
+        end
+    end
+
+    println(io)
+    println(io, "Conversion of $(r.targetcomp) is $(r.targetconversion)")
+end
+
+
+
+#----------------------------------------------------------------------------
+#
 #----Constructors------------------------------------------------------------
 #
 #----------------------------------------------------------------------------
@@ -32,10 +63,27 @@ end
 
 Constructor for Reaction object. Calculates the index of the target reactant in the reactants vector and stores it for efficiency in downstream calculations.
 """
-function Reaction(reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion)
+function Reaction(complist, reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion)
     targetindex = findfirst(isequal(targetcomp), reactants)
 
-    return Reaction(reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion, targetindex)
+    # Do stoichiometry check
+    atoms_in = Dict{String, Float64}()
+    atoms_out = Dict{String, Float64}()
+
+    for (i, reactant) in enumerate(reactants)
+        for (j, atom) in enumerate(complist[reactant].atoms)
+            atoms_in[atom] = get(atoms_in, atom, 0.0) + reactcoeffs[i]*complist[reactant].counts[j]
+        end
+    end
+    for (i, product) in enumerate(products)
+        for (j, atom) in enumerate(complist[product].atoms)
+            atoms_out[atom] = get(atoms_out, atom, 0.0) + prodcoeffs[i]*complist[product].counts[j]
+        end
+    end
+
+    !(atoms_in == atoms_out) && throw(ArgumentError("Reaction stoichiometry check failed."))
+    
+    return Reaction(complist, reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion, targetindex)
 end
 
 
