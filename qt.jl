@@ -85,7 +85,7 @@ sysboundaries = BoundaryList()
     unitops --> ["Mixer"]
 end "B1" sysunitops sysboundaries
 
-@boundary begin
+ @boundary begin
     unitops --> ["Reactor", "ProductSplitter"]
 end "B2" sysunitops sysboundaries
 

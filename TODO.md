@@ -1,6 +1,8 @@
 # Things to do
 
  ## YES
+ - Change the setup so you start by defining a Flowsheet, which automatically creates a ComponentList, StreamList, UnitOpList and BoundaryList. Then we just pass the Flowsheet object everywhere.
+ 
  - Define unit tests for CI at some future point
  - Don't limit the length of pretty table outputs.
 

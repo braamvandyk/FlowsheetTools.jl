@@ -1,40 +1,84 @@
 # # FlowsheetTools.jl Demonstration
-# FlowsheetTools.jl is a simply library for dealing with flowsheets (components, streams, unitops, boundaries and flowsheets).
-# It can be used as a platform for running custom models, for example when fitting kinetic parameters to pilot plant data, where the operating unit is more complicated than a single reactor.
-# The primary intended purpose however, was for process analytics - generating KPIs on a flowsheet and reconciling mass balances for generic flowsheets.
+# FlowsheetTools.jl is a library for dealing with flowsheets (components, streams, unit operations, mass balance boundaries, and flowsheets).
+# It can be used as a platform for running custom models, for example when fitting kinetic parameters to pilot plant data, where the operating unit is more complicated than a single reactor. The primary intended purpose however, was for process analytics - generating KPIs on a flowsheet and reconciling mass balances for generic flowsheets.
+
+# For more convenient analysis of flowsheets with missing measurements, a few utility unit operations are provided: a mixer, a flow splitter, a component splitter (to emulate a separation process with split factors) and a stoichiometric reactor block with specified conversions. Custom unit operations can also be defined, by simply providing a function that calculates the outlet streams from the inlets and an optional list of parameters.
+
+# The intention was not to build a full-on process simulator, but the custom reactor blocks etc can be easily added, when needed.
+
+# Let's have a look at how to use the library.
 
 using FlowsheetTools, Statistics
 
 # ## Components
+# The most basic building block we need is a set of components. A component in FlowsheetTools.jl is a fairly simple object. It has a name, so we can refer to it, and contains the list of atoms and the number of each that make up the component. The molar mass of the component is automatically calculated and also stored.
 
-# We need a ComponentList to hold all the components, so we know where to find them later
+# We store all the components in a ComponentList, so we have a container to find them in, when needed. This makes things a lot easier than trying to keep track of a host of "loose" component variables. While nothing stops you from defining multiple ComponentLists, having more than one is not best practise.
+# In fact, to keep things consistent, the containers for streams (a `StreamList`) will insist that all streams contained in it refer to a single `ComponentList`, so it is much better to stick to one `ComponentList` at a time.
+
+# Let's start by creating our `ComponentList` to hold all of the components we have present in our flowsheet.
 
 syscomps = ComponentList()
 
-# You can read them from a folder with saved components
+# `ComponentList` is a wrapper around a Dict{String, Component} and can be in the same way as such a `Dict`, using the component names to index. Now that we have a container to put them into, we can add some components.
+
+# Since it is likely that we shall re-use components, they can be stored in files, so we don't need to define them every time. Let's read in some components created earlier and stored in the sub-folder `components` under the active folder:
 
 count = readcomponentlist!(syscomps, "components", ["Ethylene", "Ethane", "Hydrogen"])
 
-# Or define them directly
+# The function `readcomponents` returns the number of components read in - 3 in this case. We specified the names of the components to read in from the folder. There can be any number of files stored there. We also supplied the empty component list (`syscomps`) as the first argument. This container is modified in-place.
+
+syscomps
+
+# To access a component in the component list, we index using the name of the component.
+
+syscomps["Ethylene"]
+
+# If we need to define new components, ther are two ways to go about this.
+
+# The first is by using the @comp macro. It takes a list of atoms and a number of each, separated by a -->. We also suply a name for the component, which is stored in the `ComponentList`, and the `ComponentList` to which to add it.
 
 @comp begin
     N --> 2
 end "Nitrogen" syscomps
 
-# And then save them to file to re-use later.
+# The second way is to create the components by calling the constructor directly. This is most useful when creating lists of components, such a homologous series. For example, we could create the n-paraffins from C1 to C10 as follows: 
+
+cl = ComponentList()
+for n in 1:10
+    if n == 1
+        name = "CH4"
+    else
+        name = "C$(n)H$(2n+2)"
+    end
+    cl[name] = Component(name, ["C", "H"], [n, 2n+2])
+end
+cl
+#-
+cl["C10H22"]
+
+# We can save the components to file to re-use later. `writecomponents` takes the path to write to, and the specific component to write. It returns the number of bytes written.
 
 writecomponent(joinpath("components/", "Nitrogen.comp"), syscomps["Nitrogen"])
 
 
 # ## Streams
 
-# As for components, we create a container stream list to hold the streams so we have something to iterate through later.
+# Now that we have components (and a handy container to store them in), we can create streams for our process. Each stream contains a list of components and their flowrates. You can specify either the mass or moalr flows when creating the stream and the other will be automatically calculated. The constructor will also calculate the flowrates for each type of atom in the stream.
+
+# There are of course two ways in which we would use streams. Either with a single, current value for the flowrate and composition, or with a set of historical values of these. The former is useful for simulations, while the latter is useful for analysis. In either case, the flows are stored in `TimeArrays` from `TimeSeries.jl`. In cases where we only have a single flowrate, this is a simply `TimeArray` of length 1, with an arbitrary (zero) timestamp asigned to the value.
+
+# As was the case with components, we need a container (a stream list) to hold the streams so we have something to iterate through later. Just like `ComponentList`, `StreamList` is a wrapper around a `Dict{String, Stream}`.
 
 sysstreams = StreamList()
 
-# You can create the streams directly with instantaneous flows.
-# This can be in either mass or molar flows.
+# We can create the streams directly with instantaneous flows. This can be in either mass or molar flows. While we could call the constructor directly, using the `@stream` macro is more convenient.
+
+# The first parameter indicates whether the flows are mass or molar flows. Similarly to what we did for components with `@comp`, we then provide a list of components and their flowrates, separated with a -->. We also supply a name for the stream, against which it is stored in the `StreamList`, the component list in which the components are defined, and lastly the `StreamList` to which to add the new stream.
+
 # The units are not specified - if you assume the mass flows are in kg/h, then the molar equivalent is kmol/hr, but this could as easily be lb/week and lbmole/week.
+
+# Here we specify two stream, of identical composition and flows, but by specifying mass flows for the first and molar flows for the second.
 
 @stream mass begin
     "Ethylene" --> 2.8053
@@ -67,13 +111,21 @@ all(getindex.(values(sysstreams["Test"].atomflows), "C") .== getindex.(values(sy
 #-
 all(getindex.(values(sysstreams["Test"].atomflows), "H") .== getindex.(values(sysstreams["Product"].atomflows), "H"))
 
-# When we want to deal with streams with multiple historic data points, we read them from a file.
+# These comparisons also showed that we can access the flows using the `massflows`, `molarflows` and `atomflows` properties.
 
-# First, start with a new, empty stream list:
+sysstreams["Product"].massflows
+#-
+sysstreams["Product"].moleflows
+#-
+sysstreams["Product"].atomflows
+
+# When we want to deal with streams with multiple historic data points, to analyse plant data, we can use the `readstreamhistory` function, to read the stream from a file.
+
+# First, let's start with a new, empty stream list, to get rid of the streams we have created earlier:
 
 sysstreams = StreamList() 
 
-# Then we read the streams from file.
+# Then we in read the streams. We need to specify the folderpath to the CSV files, the name of the stream, the component list in which the components are defined and the stream list to which to add the new stream. We also specify whether the flows in the CSV files are mass or molar flows. `ismoleflow` has a default value of false, so need not be specified for mass flows.
 
 sysstreams["Feed"] = readstreamhistory(joinpath("streamhistories", "FeedStream.csv"), "Feed", syscomps; ismoleflow=true)
 sysstreams["Product"] = readstreamhistory(joinpath("streamhistories", "ProdStream.csv"), "Product", syscomps; ismoleflow=true)
@@ -81,8 +133,9 @@ sysstreams["Product"] = readstreamhistory(joinpath("streamhistories", "ProdStrea
 # In the data files (*.csv), we had columns of data for ethylene, ethane and hydrogen, but or list of components also include nitrogen.
 # We automatically set zero flows for amy components not in the file, so all the streams contain all of the components (for our sanity).
 
-# We can still add components to the component list after the streams were created.
-# If we do, then we should also call `refreshcomplist(streamlist)` to add zero flows for all of these new components to the existing streams in the stream list.
+# In the data files (*.csv), we had columns of data for ethylene, ethane and hydrogen, but our list of components also include nitrogen. We automatically set zero flows for amy components not in the file, so all the streams contain all of the components (for our sanity).
+
+# We can still add components to the component list after the streams were created. If we do, then we should also call `refreshcomplist(streamlist)` to add zero flows for all of these new components to the existing streams in the stream list.
     
 @comp begin
     Ar --> 1
@@ -90,41 +143,32 @@ end "Argon" syscomps
 
 refreshcomplist(sysstreams)
 
-sysstreams["Feed"];
-
+sysstreams["Feed"]
 
 # ## What can we do with streams?
 
-# Operations defined on streams include addition and multiplication with a scalar. Addition of streams is effectively a mixer unit.
+# Operations defined on streams include adding streams together and multiplying a stream with a scalar value. Addition of streams is effectively a mixer unit.
 # Multiplication is used to allow correction factors for mass balance reconciliation.
 
 sysstreams["Prod2"] = 2.0*sysstreams["Product"]
 
-# Check the answer
+# Let's check the answer:
 
 sysstreams["Prod2"] == 2.0*sysstreams["Product"]
 
-# Alternatively
+# Alternatively,
 
 all(values(sysstreams["Prod2"].totalmassflow) .== values(2.0 .* sysstreams["Product"].totalmassflow))
 
 # Note the use of `.==` and `.*` above. Internally the data are stored in `TimeArrays` from `TimeSeries.jl` and only the broadcasted operators are used on `TimeArray`s.
 
-# Comparison between `TimeArrays` returns a `TimeArray` and we extract the results as an aray using the `values()` function to get a `BitVector`.
+# Comparison between `TimeArrays` returns a `TimeArray` with the comparison for each timestamp and we extract the results as an aray using the `values()` function to get a `BitVector`.
 
-# We can also copy streams and copy with a multiplication factor:
-
-copystream!(sysstreams, "Product", "MyStream")
-copystream!(sysstreams, "Product", "MyStream2"; factor=2.0)
-sysstreams["MyStream2"] ≈ 2.0 * sysstreams["MyStream"]
-
-# Copy and copy with multiply
+# We can also copy streams and combine the two streams by copy with a scalar multiplication in a single call:
 
 copystream!(sysstreams, "Product", "MyStream")
-sysstreams["Product"] == sysstreams["MyStream"]
-
 copystream!(sysstreams, "Product", "MyStream2"; factor=2.0) # double the flow!
-2.0 * sysstreams["Product"] == sysstreams["MyStream2"]
+sysstreams["MyStream2"] ≈ 2.0 * sysstreams["MyStream"]
 
 # The streams have different names, but we overload `==` to only check the molar flows of each component, so we get the expected answer.
 
@@ -139,14 +183,18 @@ all(getindex.(values(sysstreams["Product"].atomflows), "N") .== getindex.(values
 # We can also rename or delete streams from the stream list:
 
 renamestream!(sysstreams, "MyStream", "Dummy")
+sysstreams
+#- 
 deletestream!(sysstreams, "Dummy")
 sysstreams
 
 # # UnitOps, Boundaries and KPIs
 
-# Let's start with an empty stream list
+# Let's start with an empty stream list again
 
 sysstreams = StreamList()
+
+# We'll add some instantaneous flow streams.
 
 @stream mole begin
     "Hydrogen" --> 1.1
@@ -157,17 +205,17 @@ end "H2" syscomps sysstreams
     "Ethane" --> 0.9
 end "C2" syscomps sysstreams
 
-# We can also add an empty stream, since we don't measure the mixed stream. We'll calculate it with a mixer model later.
-
-sysstreams["Mixed"] = emptystream(sysstreams, "Mixed")
-
 @stream mole begin
     "Ethylene" --> 0.0
     "Ethane" --> 1.0
     "Hydrogen" --> 1.0
 end "Product" syscomps sysstreams
 
-# Now we define some unit operations. As with components and streams we need a container to be able to access the streams again later.
+# We can also add an empty stream as a placeholder. We'll calculate it with a mixer model later.
+
+sysstreams["Mixed"] = emptystream(sysstreams, "Mixed")
+
+# Now we define some unit operations. As with components and streams we create a container to be able to conveniently access them again later. A `UnitOpList` works the same way as a `ComponentList` or `StreamList` - it is a wrapper around a `Dict{String, UnitOp}`.
 
 sysunitops = UnitOpList()
 
@@ -177,7 +225,18 @@ sysunitops = UnitOpList()
     calc --> mixer!
 end "Mixer" sysstreams sysunitops
 
-# And to execute the unit operation, we simply call it.
+# The `@unitop` macro creates a `UnitOp` object and adds it to the `UnitOpList`. We can then refer to it by its name, like we do with `Component` and `Stream` objects.
+# The macro takes an array of `Stream` names for inlets, and another for outlets. The `calc` field is optional. If we are only calculating KPIs for our process or reconciling mass balances, unit operations do not need to do calculations. They only serve as nodes where streams are connected.
+# If we want to do calculations, like for mixers and splitters, we need to specifiy the name of the function to call in the `calc` field.
+# The function takes the form:
+#     function functionname!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
+# As per Julia convention, we add a `!` at the end of the function name, which means the function modifies some of the variables passed - the outlet(s).
+# There can be multiple inlets and outlets, but even single inlets and outlets must be passed in an array.
+# All streams passed to a unit operation must be in the stream list. And all streams in a stream list must use the same component list. This keeps things consistent.
+# The `params` field does not have a defined type and can be anything needed for the calculation. We'll look at this in more detail later.
+
+
+# To execute the unit operation, we simply call it.
 
 sysunitops["Mixer"]()
 
@@ -246,31 +305,33 @@ sysstreams["Product"] ≈ sysstreams["Product3"]
 
 # Mass balances and KPIs are defined on a boundary around a number of unit operations. We therefore define a `Boundary` and list the contained `UnitOp`s
 
+sysboundaries = BoundaryList()
+
 @boundary begin
     unitops --> ["Mixer", "Reactor"]
-end b sysunitops
+end "B1" sysunitops sysboundaries
 
 # We can look at total mass and elemental closures, as well as the combined in- and outflows.
 
-b.atomclosures
+sysboundaries["B1"].atomclosures
 #-
-b.closure
+sysboundaries["B1"].closure
 #-
-b.total_in.totalmassflow
+sysboundaries["B1"].total_in.totalmassflow
 #-
-b.total_out.totalmassflow
+sysboundaries["B1"].total_out.totalmassflow
 
 # We can also define KPIs on the boundary. Here we use the pre-defined KPIs of `conversion(boundary, component)` and `selectivity(boundary, reactant, product)`
 
-conversion(b, "Ethane")
+conversion(sysboundaries["B1"], "Ethane")
 
 # Ethane was produced, not consumed, so has a negative value for conversion.
 
-(conversion(b, "Ethylene"), conversion(b, "Hydrogen"))
+(conversion(sysboundaries["B1"], "Ethylene"), conversion(sysboundaries["B1"], "Hydrogen"))
 
 # We had complete conversion of ethylene and only ~9% of hydrogen, due to the large excess fed.
 
-molar_selectivity(b, "Ethylene", "Ethane")
+molar_selectivity(sysboundaries["B1"], "Ethylene", "Ethane")
 
 # All of the reacted ethylene was converted to ethane.
 
@@ -340,22 +401,23 @@ sysstreams["Product"] ≈ sysstreams["Product3"]
 
 # Define the mass balance boundary for closures and KPIs
 
+sysboundaries = BoundaryList()
 @boundary begin
     unitops --> ["Mixer", "Reactor"]
-end b sysunitops
+end "B1" sysunitops sysboundaries
 
-b.atomclosures
+sysboundaries["B1"].atomclosures
 
-b.closure
+sysboundaries["B1"].closure
 
-b.total_in.totalmassflow
+sysboundaries["B1"].total_in.totalmassflow
 
-b.total_out.totalmassflow
+sysboundaries["B1"].total_out.totalmassflow
 
-c1 = conversion(b, "Ethane")
-c2 = conversion(b, "Ethylene")
+c1 = conversion(sysboundaries["B1"], "Ethane")
+c2 = conversion(sysboundaries["B1"], "Ethylene")
 
-sc2 = molar_selectivity(b, "Ethylene", "Ethane")
+sc2 = molar_selectivity(sysboundaries["B1"], "Ethylene", "Ethane")
 
 (mean(values(c1)), mean(values(c2)), mean(values(sc2)))
 
@@ -386,11 +448,11 @@ end "eReactor" sysstreams sysunitops
 
 @boundary begin
     unitops --> ["eMixer", "eReactor"]
-end b sysunitops
+end "B2" sysunitops sysboundaries
 
 
 # We can request the correction factors, without applying them.
-corrections = calccorrections(b)
+corrections = calccorrections(sysboundaries)
 
 
 # We can also pass through a custom additional error function to minimize.
@@ -399,12 +461,12 @@ corrections = calccorrections(b)
 # You can, for example, add distance from equilibrium for a reaction to the reconciliation.
 
 myerr(factorDict) = 100.0 * sum(abs2, 1.0 .- values(factorDict))
-corrections = calccorrections(b, myerr)
+corrections = calccorrections(sysboundaries, customerror=myerr)
 
 # The previous example uses a constant weight for all elements, but we can specifiy individual weights as well.
 
 weights = Dict(["H" => 1.0, "C" => 1.5, "O" => 1.0, "Ar" => 0.0, "N" => 0.0])
-corrections2 = calccorrections(b, setelements=true, elementweights=weights)
+corrections2 = calccorrections(sysboundaries, customerror=myerr, setelements=true, elementweights=weights)
 
 # `calccorrections` takes a boundary for which to calculate the correction factors, and then optional weights for the total mass balance error and the elemental errors.
 # These latter values default to 1.0 each. It uses [Ridge Regression](https://www.ibm.com/topics/ridge-regression?_sm_au_=iF5HM658VZnjn6Sr0GLqHKHB1jtC6) with a default λ = 0.1
@@ -414,12 +476,12 @@ corrections2 = calccorrections(b, setelements=true, elementweights=weights)
 
 # An alternative option is to use an anchor stream, rather than Ridge Regression. The correction factor for the anchor stream will be 1.0, i.e. there is no adjustment.
 
-corrections_a = calccorrections_anchor(b, "eProduct")
-corrections_a = calccorrections_anchor(b, "eProduct", myerr)
+# corrections_a = calccorrections_anchor(sysboundaries["B2"], "eProduct")
+# corrections_a = calccorrections_anchor(sysboundaries["B2"], "eProduct", myerr)
 
 # Or again, with inidividual element weights
 
-corrections_a = calccorrections_anchor(b, "eProduct", setelements=true, elementweights=weights)
+# corrections_a = calccorrections_anchor(sysboundaries["B2"], "eProduct", setelements=true, elementweights=weights)
 
 # `calccorrections_anchor` takes a boundary for which to calculate the correction factors, an anchor stream, for which the correction is always 1.0 - no change, and then optional weights for the total mass balance error and the elemental errors.
 # These latter values default to 1.0 each.
@@ -429,23 +491,23 @@ corrections_a = calccorrections_anchor(b, "eProduct", setelements=true, elementw
 
 # We can apply the corrections, with `closemb()`, which will take a `Dict` of correction factors.
 
-b2 = closemb(b, corrections)
-b3 = closemb(b, corrections_a)
+# b2 = closemb(sysboundaries["B2"], corrections)
+# b3 = closemb(sysboundaries["B2"], corrections_a)
 
 
 # Let's compare the raw and reconciled closures:
 
-(mean(values(b.closure)), mean(values(b2.closure)), mean(values(b3.closure)))
+# (mean(values(b.closure)), mean(values(b2.closure)), mean(values(b3.closure)))
 
 # We can now write corrected streams back to file
 
-writestreamhistory(sysstreams["C2"], "corrected.csv")
+# writestreamhistory(sysstreams["C2"], "corrected.csv")
 
 # We can also request some information from a bounary. This is given in table form, packed into a string.
 
 #jl showdata(b2)
-#nb print(showdata(b2))
-print(showdata(b2)) #src
+# #  nb print(showdata(b2))
+# print(showdata(b2)) #src
 
 
 # ## Flowsheets
@@ -454,15 +516,15 @@ print(showdata(b2)) #src
 # If the flowsheet is then executed, each unit operation is execute in order, as specified.
 # Unit operations can be added or deleted with utility functions and the execution order can be modified.
 
-fs = Flowsheet(sysunitops, ["Reactor"], [1])
-addunitop!(fs, ["Mixer", "ProductSplitter", "ComponentSplitter", "Mixer2"])
+# fs = Flowsheet(sysunitops, ["Reactor"], [1])
+# addunitop!(fs, ["Mixer", "ProductSplitter", "ComponentSplitter", "Mixer2"])
 
 #jl fs();
-#nb fs()
-fs() #src
+# #nb fs()
+# fs() #src
 
 # Lastly, once a `Flowsheet` object is created, a block flow diagram can also be generated.
 
-#nb generateBFD(fs, "./myflowsheet.svg")
+# #nb generateBFD(fs, "./myflowsheet.svg")
 #jl generateBFD(fs, "./myflowsheet.svg", displaybfd=false);
-generateBFD(fs, "./myflowsheet.svg") #src
+# generateBFD(fs, "./myflowsheet.svg") #src
