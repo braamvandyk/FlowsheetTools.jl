@@ -231,6 +231,38 @@ function readcomponentlist!(fs, foldername, filenames)
     return count
 end
 
-function names(cl)
-    return collect(keys(cl.list))
+
+"""
+
+    function deletecomponent!(fs, name)
+
+Delete a component from the Flowsheet's ComponentList.
+"""
+function deletecomponent!(fs, name)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
+    if name in keys(fs.comps.list)
+        delete!(fs.comps.list, name)
+    end
+
+    # Now also clear all stream, unitops and boundaries
+    deletestreams!(fs)
+end
+
+
+"""
+
+function deletecomponents!(fs)
+
+Delete all components from the Flowsheet's ComponentList.
+
+"""
+function deletecomponents!(fs)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
+    for name in keys(fs.comps.list)
+        delete!(fs.comps.list, name)
+    end
+
+    # Now also clear all stream, unitops and boundaries
+    deletestreams!(fs)
+
 end

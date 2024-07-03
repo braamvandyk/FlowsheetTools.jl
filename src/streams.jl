@@ -242,7 +242,8 @@ function Base.:(==)(a::Stream, b::Stream)
     # Extend the == operator to check if two streams have equal flows.
     # The check is done internally on molar flows.
     # Since flows are floating point values, it is recommended to rather use ≈ for comparisons.
-    return all(values(a.moleflows) .== values(b.moleflows))
+    # Will also insist on identical names!
+    return (all(values(a.moleflows) .== values(b.moleflows))) && (a.name == b.name)
 end
 
 
@@ -380,7 +381,7 @@ macro stream(flowtype::Symbol, ex::Expr, name::String, fs::Symbol)
             end
         end
     end
-    return :($(esc(fs.streams))[$name] = Stream($name, $(esc(fs.comps)), $comps, $timestamps, $(flows'), $ismoleflow))
+    return :($(esc(fs)).streams[$name] = Stream($name, $(esc(fs)).comps, $comps, $timestamps, $(flows'), $ismoleflow))
 end
 
 
@@ -416,16 +417,43 @@ end
 
 """
 
-    function deletestream!(fs, from)
+    function deletestream!(fs, name)
 
+Delete a stream from the Flowsheet's StreamList.
+"""
+function deletestream!(fs, name)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
+    if name in keys(fs.streams.list)
+        delete!(fs.streams.list, name)
 
-Delete a stream from the stream list in fs::Flowsheet
-`from` is the name of the stream to be deleted
+        # Also clear the unitops to ensure consistency
+        for (uname, unitop) in fs.unitops.list
+            if name in unitop.inlets || name in unitop.outlets
+                deleteunitop!(fs, uname) # Will cascase delete boundaries as well
+            end
+        end
+    end
+
+    return nothing
+end
+
 
 """
-function deletestream!(fs, from)
+
+function deletestreams!(fs)
+
+Delete all streams from the Flowsheet's StreamList.
+
+"""
+function deletestreams!(fs)
     @argcheck fs isa Flowsheet "fs must be a Flowsheet"
-    delete!(fs.streams.list, from)
+
+    for name in keys(fs.streams.list)
+        delete!(fs.streams.list, name)
+    end
+
+    # Also kill all the streams and boundaries
+    deleteunitops!(fs)
 
     return nothing
 end
@@ -440,14 +468,14 @@ Rename a stream in the stream list in fs::Flowsheet
 `from` and `to` are the old and new names of the stream
 
 """
-function renamestream!(fs, from::String, to::String)
+function renamestream!(fs, from, to)
     fromstream = fs.streams[from]
     comps = string.(colnames(fromstream.massflows))
     timestamps = timestamp(fromstream.massflows)
     flowdata = values(fromstream.massflows)
 
     fs.streams[to] = Stream(to, fromstream.comps, comps, timestamps, flowdata)
-    deletestream!(fs.streams, from)
+    deletestream!(fs, from)
     return nothing
 end
 
@@ -491,7 +519,7 @@ end
 
 """
 
-    addfixedstream!(fs, name, flows, ismoleflow=false)
+    addfixedstream!(fs, name, flows; ismoleflow=false)
     
 Returns a stream with the same components and timestamp as the other streams in `fs::Flowsheet` with all flows set to a specified constant values.
 Use the second form if no other streams exist, to specifiy the names of the components.
@@ -499,7 +527,7 @@ Use the second form if no other streams exist, to specifiy the names of the comp
 `flows` should contain the constant flowrates for all the components in the stream.
 
 """
-function addfixedstream!(fs, name, flows, ismoleflow=false)
+function addfixedstream!(fs, name, flows; ismoleflow=false)
     # Take the first stream in the StreamList as a reference to get the components and timestamps.
     # Here `first()` returns a `Pair` of a name and a stream, so we call `second()` to get the `Stream` object
     refstrm = try
@@ -593,3 +621,4 @@ function refreshcomplist(fs)
         fs.streams[name] = Stream(name, complist, comps, timestamps, flowdata)
     end
 end
+

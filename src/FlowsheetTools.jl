@@ -1,9 +1,11 @@
 module FlowsheetTools
 
-export  Component, ComponentList, @comp, writecomponent, readcomponentlist!,
-        Stream, StreamList, @stream, copystream!, deletestream!, renamestream!, addemptystream!, addfixedstream!, readstreamhistory!, writestreamhistory, writestreamhistories, refreshcomplist,
+export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, deletecomponent!, deletecomponents!,
+        Stream, StreamList, @stream, copystream!, deletestream!, renamestream!, addemptystream!, addfixedstream!,
+            readstreamhistory!, writestreamhistory, writestreamhistories, refreshcomplist, deletestream!, deletestreams!,
         UnitOp, UnitOpList, @unitop, mixer!, flowsplitter!, componentplitter!, Reaction, stoichiometric_reactor!,
-        BalanceBoundary, BoundaryList, @boundary, showdata, 
+            deleteunitop!, deleteunitops!,
+        BalanceBoundary, BoundaryList, @boundary, showdata, deleteboundary!, deleteboundaries!,
         calccorrections, calccorrections_anchor, closemb!,
         conversion, molar_selectivity,
         Flowsheet, addunitop!, setorder!, generateBFD, componentnames
@@ -56,6 +58,19 @@ include("boundaries.jl")
 include("kpis.jl")
 include("closure.jl")
 include("flowsheets.jl")
+
+
+
+"""
+
+    function names(a)
+
+Returns the names of the components in the `ComponentList`, `StreamList` or `BoundaryList`.
+
+"""
+function names(a)
+    return collect(keys(a.list))
+end
 
 # @setup_workload begin
 #       @compile_workload begin

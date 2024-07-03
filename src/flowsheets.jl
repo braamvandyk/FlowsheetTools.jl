@@ -16,16 +16,20 @@ end
 
 
 function (fs::Flowsheet)(neworder = nothing; showoutput=true)
+    showoutput && println("Executing:")
+
     if isnothing(neworder)
-        for i in fs.execution_order
-            showoutput && println(i, "  ", fs.unitops[i])
-            fs.unitlist[fs.unitops[i]]()
+        for i in 1:length(fs.rununits)
+            idx = findfirst(==(i), fs.runorder)
+            showoutput && println(i, "  ", fs.unitops[fs.rununits[idx]].name)
+            fs.unitops[fs.rununits[idx]]()
         end
     else
-        for i in neworder
-            u = fs.unitops[i]
-            showoutput && println(i, "  ", fs.unitops[i])
-            u()
+        @argcheck length(neworder) == length(fs.rununits) "neworder must have same length as rununits"
+        for i in 1:length(fs.rununits)
+            idx = findfirst(==(i), neworder)
+            showoutput && println(i, "  ", fs.unitops[fs.rununits[idx]].name)
+            fs.unitops[fs.rununits[idx]]()
         end
     end
 
@@ -59,16 +63,30 @@ end
 
 function Base.show(io::IO, fs::Flowsheet)
     d = OrderedDict{Int, String}()
-    for i in 1:length(fs.runorder)
-        d[fs.execution_order[i]] = fs.unitops[i]
+    for i in 1:length(fs.rununits)
+        idx = findfirst(==(i), fs.runorder)
+        d[i] = fs.rununits[idx]
     end
-    sort!(d)
 
     println(io, "Flowsheet:")
-    println(io)
-    println(io, "Execution Order:")
+    println(io, "UnitOps in Execution Order:")
     for (k, v) in d
         println(k, "  ", v)
+    end
+    println(io)
+    println(io, "Components:")
+    for (name, _) in fs.comps
+        println(io, "  ", name)
+    end
+    println(io)
+    println(io, "Streams:")
+    for (name, _) in fs.streams
+        println(io, "  ", name)
+    end
+    println(io)
+    println(io, "Boundaries:")
+    for (name, _) in fs.boundaries
+        println(io, "  ", name)
     end
 end
 
@@ -214,7 +232,7 @@ function generateBFD(fs::Flowsheet, filename = nothing; displaybfd=true)
         
 =#
 
-    inlets, outlets, internals = boundarystreams(fs.unitops, fs.rununits)
+    inlets, outlets, internals = boundarystreams(fs.unitops, keys(fs.unitops.list))
     
     # Convert to list of names
     inletnames = String[]

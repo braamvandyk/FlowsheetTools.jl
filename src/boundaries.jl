@@ -263,7 +263,7 @@ function showdata(b::BalanceBoundary)
     invals = pretty_table(String, b.total_in.massflows)
     outvals = pretty_table(String, b.total_out.massflows)
 
-    str = "Mass Balance Boundary:\n" * "-"^22 * "\n\nTotal Mass Flows In:\n" * invals * "\n\n" * "Total Mass Flows In:\n" * outvals
+    str = "Mass Balance Boundary:\n" * "-"^22 * "\n\nTotal Mass Flows In:\n" * invals * "\n\n" * "Total Mass Flows Out:\n" * outvals
 
     return str
 end
@@ -323,4 +323,35 @@ function boundarystreams(unitops, included_units)
     @argcheck length(outlets) > 0 "zero outlet streams from the boundary"
 
     return inlets, outlets, internals
+end
+
+"""
+
+    function deleteboundary!(fs, name)
+
+Delete the specified bounary from the Flowsheet's BoundaryList.
+
+"""
+function deleteboundary!(fs, name)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
+
+    if name in keys(fs.boundaries.list)
+        delete!(fs.boundaries.list, name);
+    end
+end
+
+
+"""
+
+    function deleteboundaries!(fs)
+
+Delete all boundaries from the Flowsheet's BoundaryList.
+
+"""
+function deleteboundaries!(fs)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
+
+    for name in keys(fs.boundaries.list)
+        delete!(fs.boundaries.list, name);
+    end
 end

@@ -6,17 +6,24 @@
 
 
 """
-    mixer!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
+
+    function mixer!(fs, outlets, inlets, params)
 
 Calculation for mixer UnitOps. Combines all feed streams into a single outlet stream.
-Will error if more than one outlet stream is defined. Values in `params` are ignored.
+    streams::StreamList (should be automatically assigned to the UnitOp upon creation)
+    outlets::Vector{String} or equivalent
+    inlets::Vector{String} or equivalent
+    params can by of any type relevant to the calculations
+
+Will throw if more than one outlet stream is defined. Values in `params` are ignored.
+
 """
-function mixer!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
+function mixer!(streams, outlets, inlets, params)
     @argcheck length(outlets) == 1 "mixers can have only one outlet stream"
 
-    tempstream = sum(streamlist[inlets])
+    tempstream = sum(streams[inlets])
 
-    streamlist[outlets[1]] = renamestream(tempstream, outlets[1])
+    streams[outlets[1]] = renamestream(tempstream, outlets[1])
     
     return nothing
 end

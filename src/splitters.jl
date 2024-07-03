@@ -6,7 +6,7 @@
 
 
 """
-    flowsplitter!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
+    flowsplitter!(fs, outlets::Vector{String}, inlets::Vector{String}, params)
 
 Calculation for flowsplitter UnitOps. Splits combined feed stream according to params - an iterable with 
 split fractions to (n - 1) streams. The last stream gets the balance.

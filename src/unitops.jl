@@ -286,3 +286,82 @@ macro unitop(ex::Expr, name::String, fs::Symbol)
         end
     end
 end
+
+
+#----------------------------------------------------------------------------
+# 
+#----Utilities---------------------------------------------------------------
+# 
+#----------------------------------------------------------------------------
+
+
+"""
+
+    function deleteunitop!(fs, name)
+
+Delete a stream from the Flowsheet's StreamList.
+"""
+function deleteunitop!(fs, name)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
+    if name in keys(fs.unitops.list)
+        delete!(fs.unitops.list, name)
+
+        idx = findfirst(==(name), fs.rununits)
+        if !isnothing(idx)
+            deleteat!(fs.rununits, idx)
+            
+            gap = fs.runorder[idx]
+            deleteat!(fs.runorder, idx)
+            
+            # Fix gap in the run order
+            for i in eachindex(fs.runorder)
+                if fs.runorder[i] > gap
+                    fs.runorder[i] -= 1
+                end
+            end
+        end
+        
+        # Also clear the boundaries to ensure consistency
+        
+        for (bname, boundary) in fs.boundaries.list
+            if name in boundary.included_units
+                delete!(fs.boundaries.list, bname)
+            end
+        end
+    end
+    
+    return nothing
+end
+
+
+"""
+
+function deleteunitops!(fs)
+
+Delete all streams from the Flowsheet's StreamList.
+
+"""
+function deleteunitops!(fs)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
+    for name in keys(fs.unitops.list)
+        delete!(fs.unitops.list, name)
+    end
+    for i in eachindex(fs.rununits)
+        deleteat!(fs.rununits, 1)
+    end
+    for i in eachindex(fs.runorder)
+        deleteat!(fs.runorder, 1)
+    end
+
+    # Also clear the boundaries to ensure consistency
+
+    for bname in keys(fs.boundaries.list)
+        delete!(fs.boundaries.list, bname)
+    end
+
+
+
+    return nothing
+end
+
+
