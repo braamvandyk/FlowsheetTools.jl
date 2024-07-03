@@ -24,35 +24,6 @@ end
 
 #----------------------------------------------------------------------------
 #
-#----Pretty Printing---------------------------------------------------------
-#
-#----------------------------------------------------------------------------
-
-
-function Base.show(io::IO, r::Reaction)
-    print(io, "Reaction:\t")
-    for (i, reactant) in enumerate(r.reactants)
-        print(io, r.reactcoeffs[i], " ", reactant)
-        if i < length(r.reactants)
-            print(io, " + ")
-        end
-    end
-    print(io, " --> ")
-    for (i, product) in enumerate(r.products)
-        print(io, r.prodcoeffs[i], " ", product)
-        if i < length(r.products)
-            print(io, " + ")
-        end
-    end
-
-    println(io)
-    println(io, "Conversion of $(r.targetcomp) is $(r.targetconversion)")
-end
-
-
-
-#----------------------------------------------------------------------------
-#
 #----Constructors------------------------------------------------------------
 #
 #----------------------------------------------------------------------------
@@ -63,7 +34,7 @@ end
 
 Constructor for Reaction object. Calculates the index of the target reactant in the reactants vector and stores it for efficiency in downstream calculations.
 """
-function Reaction(complist, reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion)
+function Reaction(fs, reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion)
     targetindex = findfirst(isequal(targetcomp), reactants)
 
     # Do stoichiometry check
@@ -71,19 +42,19 @@ function Reaction(complist, reactants, products, reactcoeffs, prodcoeffs, target
     atoms_out = Dict{String, Float64}()
 
     for (i, reactant) in enumerate(reactants)
-        for (j, atom) in enumerate(complist[reactant].atoms)
-            atoms_in[atom] = get(atoms_in, atom, 0.0) + reactcoeffs[i]*complist[reactant].counts[j]
+        for (j, atom) in enumerate(fs.comps[reactant].atoms)
+            atoms_in[atom] = get(atoms_in, atom, 0.0) + reactcoeffs[i]*fs.comps[reactant].counts[j]
         end
     end
     for (i, product) in enumerate(products)
-        for (j, atom) in enumerate(complist[product].atoms)
-            atoms_out[atom] = get(atoms_out, atom, 0.0) + prodcoeffs[i]*complist[product].counts[j]
+        for (j, atom) in enumerate(fs.comps[product].atoms)
+            atoms_out[atom] = get(atoms_out, atom, 0.0) + prodcoeffs[i]*fs.comps[product].counts[j]
         end
     end
 
     !(atoms_in == atoms_out) && throw(ArgumentError("Reaction stoichiometry check failed."))
     
-    return Reaction(complist, reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion, targetindex)
+    return Reaction(fs.comps, reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion, targetindex)
 end
 
 
@@ -169,7 +140,35 @@ function stoichiometric_reactor!(streamlist::StreamList, outlets::Vector{String}
     end
     
     # Replace outlet stream in streamlist. Set ismoleflow to true.
-    streamlist[outlets[1]] = Stream(outlets[1], feed.complist, comps, timestamps, vals, true)  
+    streamlist[outlets[1]] = Stream(outlets[1], feed.comps, comps, timestamps, vals, true)  
     
     return nothing
+end
+
+
+#----------------------------------------------------------------------------
+#
+#----Pretty Printing---------------------------------------------------------
+#
+#----------------------------------------------------------------------------
+
+
+function Base.show(io::IO, r::Reaction)
+    print(io, "Reaction:\t")
+    for (i, reactant) in enumerate(r.reactants)
+        print(io, r.reactcoeffs[i], " ", reactant)
+        if i < length(r.reactants)
+            print(io, " + ")
+        end
+    end
+    print(io, " --> ")
+    for (i, product) in enumerate(r.products)
+        print(io, r.prodcoeffs[i], " ", product)
+        if i < length(r.products)
+            print(io, " + ")
+        end
+    end
+
+    println(io)
+    println(io, "Conversion of $(r.targetcomp) is $(r.targetconversion)")
 end

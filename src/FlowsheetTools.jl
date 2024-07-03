@@ -1,12 +1,12 @@
 module FlowsheetTools
 
-export  Component, ComponentList, @comp, writecomponent, readcomponent, readcomponentlist!, names,
-        Stream, StreamList, @stream, copystream!, deletestream!, renamestream!, renamestream, emptystream, fixedstream, readstreamhistory, writestreamhistory, refreshcomplist,
+export  Component, ComponentList, @comp, writecomponent, readcomponentlist!,
+        Stream, StreamList, @stream, copystream!, deletestream!, renamestream!, addemptystream!, addfixedstream!, readstreamhistory!, writestreamhistory, writestreamhistories, refreshcomplist,
         UnitOp, UnitOpList, @unitop, mixer!, flowsplitter!, componentplitter!, Reaction, stoichiometric_reactor!,
         BalanceBoundary, BoundaryList, @boundary, showdata, 
         calccorrections, calccorrections_anchor, closemb!,
         conversion, molar_selectivity,
-        Flowsheet, addunitop!, setorder!, generateBFD
+        Flowsheet, addunitop!, setorder!, generateBFD, componentnames
 
 
 using ArgCheck,                 # Replace simple @asserts with ArgCheck

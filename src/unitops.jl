@@ -1,6 +1,3 @@
-# TODO Add a splitter unit
-# TODO Add a stoichiometric reactor with multiple reactions and conversions
-
 #----------------------------------------------------------------------------
 #
 #----Definitions-------------------------------------------------------------
@@ -11,7 +8,7 @@
 struct UnitOp
     name::String
 
-    streamlist::StreamList
+    streams::StreamList
     # Connected streams with history
     inlets::Vector{String}
     outlets::Vector{String}
@@ -46,9 +43,9 @@ end
 
 function (u::UnitOp)(newparams = nothing)
     if isnothing(newparams)
-        u.f!(u.streamlist, u.outlets, u.inlets, u.params)
+        u.f!(u.streams, u.outlets, u.inlets, u.params)
     else
-        u.f!(u.streamlist, u.outlets, u.inlets, newparams)
+        u.f!(u.streams, u.outlets, u.inlets, newparams)
     end
 end
 
@@ -127,8 +124,8 @@ function Base.setindex!(A::UnitOpList, X::UnitOp, idx::String)
         # Get the first item in the `list` field. As `list` is a `Dict`, this returns a `Pair`.
         # We get the value entry using the `second` field of the `Pair`, which returns a `UnitOp`,
         # of which we get the `streamlist` field.
-        currentlist = first(A.list).second.streamlist
-        X.streamlist != currentlist && throw(ArgumentError("all unit operations in UnitOpList must reference the same StreamList"))
+        currentlist = first(A.list).second.streams
+        X.streams != currentlist && throw(ArgumentError("all unit operations in UnitOpList must reference the same StreamList"))
 
         A.list[idx] = X
     end
@@ -161,7 +158,7 @@ function Base.show(io::IO, u::UnitOp)
     println(io)
     println(io, "Product streams: ", [s for s in u.outlets])
     
-    strm = first(u.streamlist).second
+    strm = first(u.streams).second
     
     # If streams hold only one data point, don't print this
     if strm.numdata > 1
@@ -182,7 +179,7 @@ function  Base.show(io::IO, uol::UnitOpList)
         end
         
         uo = first(uol.list).second
-        sl = uo.streamlist
+        sl = uo.streams
         inlets = uo.inlets
         strm = sl[inlets[1]]
         
@@ -224,10 +221,10 @@ Defines a `UnitOp with` the specified name and connected streams.
     inlets --> ["H2", "C2"]
     outlets --> ["Mixed"]
     calc --> mixer!
-end "Mixer" sysstreams sysunitops
+end "Mixer" fs
 
-This will create a UnitOp named "Mixer", saved into sysunitops["Mixer"].
-The specified streams refer to entries in sysstreams::StreamList.
+This will create a UnitOp named "Mixer", saved into fs.unitops["Mixer"].
+The specified streams refer to entries in fs.streams::StreamList.
 
 Two optional parameters may be specified, i.e. calc and params:
 
@@ -238,13 +235,13 @@ calc is a function, e.g.
 params is an iterable passed to the function.
 
 Together, these specify a calculation to perform to calculate the outlet(s) from the inlet(s), when
-calling `sysunitops["Mixer"]()`
+calling `fs.unitops["Mixer"]()`
 
-Alternative parameters may also be specified in the call, e.g.
-    sysunitops["Mixer"]([1, 2, 3])
+Alternative parameter values may also be specified in the call, e.g.
+    fs.unitops["Mixer"]([1, 2, 3])
 
 """
-macro unitop(ex::Expr, name::String, streamlist::Symbol, unitoplist::Symbol)      
+macro unitop(ex::Expr, name::String, fs::Symbol)      
     local inlets = String[]
     local outlets = String[]
     local func = nothing
@@ -278,8 +275,14 @@ macro unitop(ex::Expr, name::String, streamlist::Symbol, unitoplist::Symbol)
     end
 
     if isnothing(func)
-        return :($(esc(unitoplist))[$name] = UnitOp($name, $(esc(streamlist)), $inlets, $outlets))
+        return quote
+            $(esc(fs)).unitops[$name] = UnitOp($name, $(esc(fs)).streams, $inlets, $outlets)
+            addtorun!($(esc(fs)), $name)
+        end
     else    
-        return :($(esc(unitoplist))[$name] = UnitOp($name, $(esc(streamlist)), $inlets, $outlets, $(esc(func)), $(esc(params))))
+        return quote
+            $(esc(fs)).unitops[$name] = UnitOp($name, $(esc(fs)).streams, $inlets, $outlets, $(esc(func)), $(esc(params)))
+            addtorun!($(esc(fs)), $name)
+        end
     end
 end

@@ -12,7 +12,7 @@ struct Stream
     # Number of historic data points
     numdata::Integer
     
-    complist::ComponentList
+    comps::ComponentList
     
     # Flow data, mass, molar and atoms
     massflows::TimeArray
@@ -35,6 +35,7 @@ end
 
 
 """
+
     function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
 
 Constructor for a stream history object that defines the stream name and component flows
@@ -50,6 +51,7 @@ need be specified in the constructor. Other components are assigned zero flows. 
 expidite the addition of streams using the internal TimeArray objects.
 
 It is recommended to rather create StreamHistory objects via readstreamhistory().
+
 """
 function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
     numcomps = length(comps)
@@ -125,10 +127,12 @@ end
 
 
 """
+
     StreamList()
 
 Constructor for an empty stream list. Streams are added when created via the @stream macro or
 when read from file with readstreamhistory()
+
 """
 function StreamList()
     l = OrderedDict{String, Stream}()
@@ -151,10 +155,10 @@ function Base.setindex!(A::StreamList, X::Stream, idx::String)
         # Get the first item in the `list` field. As `list` is a `Dict`, this returns a `Pair`.
         # We get the value entry using the `second` field of the `Pair`, which returns a `Stream`,
         # of which we get the `complist` field.
-        currentlist = first(A.list).second.complist
+        currentlist = first(A.list).second.comps
         current_ts = timestamp(first(A.list).second.massflows)
 
-        X.complist != currentlist && throw(ArgumentError("all streams in StreamList must reference the same ComponentList"))
+        X.comps != currentlist && throw(ArgumentError("all streams in StreamList must reference the same ComponentList"))
         !all(timestamp(X.massflows) .== current_ts) && throw(ArgumentError("all streams in StreamList must have the same timestamps"))
 
         A.list[idx] = X
@@ -188,12 +192,13 @@ function Base.length(A::Stream)
 end
 
 
-# Extend the addition operator to add to streams to each other - a mixer.
-# All streams must refer to the same component list .
 function Base.:+(a::Stream, b::Stream)
+    # Extend the addition operator to add to streams to each other - a mixer.
+    # All streams must refer to the same component list.
+
     # Make sure the streams use the same system components and timestamps 
     # TimeArrays will add only matching timestamps, but this result in varying data lengths, which must be avoided
-    a.complist != b.complist && throw(ArgumentError("cannot add streams with different system component lists"))
+    a.comps != b.comps && throw(ArgumentError("cannot add streams with different system component lists"))
     a.numdata != b.numdata && throw(DimensionMismatch("cannot add streams with different data lengths"))
     !all(timestamp(a.massflows) .== timestamp(b.massflows)) && throw(ArgumentError("cannot add streams with different timestamps"))
 
@@ -202,7 +207,7 @@ function Base.:+(a::Stream, b::Stream)
     flowdata = values(a.massflows .+ b.massflows)
 
     
-    return Stream(a.name * "+" * b.name, a.complist, comps, timestamps, flowdata)
+    return Stream(a.name * "+" * b.name, a.comps, comps, timestamps, flowdata)
 end
 
 
@@ -213,7 +218,7 @@ function Base.:*(a::T, b::Stream) where T <: Real
     timestamps = timestamp(b.massflows)
     flowdata = values(a .* b.massflows)
    
-    return Stream(b.name, b.complist, comps, timestamps, flowdata)
+    return Stream(b.name, b.comps, comps, timestamps, flowdata)
 end
 
 
@@ -222,21 +227,21 @@ function Base.:*(b::Stream, a::T) where T <: Real
     timestamps = timestamp(b.massflows)
     flowdata = values(a .* b.massflows)
    
-    return Stream(b.name, b.complist, comps, timestamps, flowdata)
+    return Stream(b.name, b.comps, comps, timestamps, flowdata)
 end
 
 
-# Extend the ≈ operator to check if two streams have approximately equal flows.
-# The check is done internally on molar flows.
 function Base.:≈(a::Stream, b::Stream)
+    # Extend the ≈ operator to check if two streams have approximately equal flows.
+    # The check is done internally on molar flows.
     return all(values(a.moleflows) .≈ values(b.moleflows))
 end
 
 
-# Extend the == operator to check if two streams have equal flows.
-# The check is done internally on molar flows.
-# Since flows are floating point values, it is recommended to rather use ≈ for comparisons.
 function Base.:(==)(a::Stream, b::Stream)
+    # Extend the == operator to check if two streams have equal flows.
+    # The check is done internally on molar flows.
+    # Since flows are floating point values, it is recommended to rather use ≈ for comparisons.
     return all(values(a.moleflows) .== values(b.moleflows))
 end
 
@@ -246,8 +251,8 @@ function  Base.copy(A::Stream)
 end
 
 
-# Pretty printing for stream objects
 function Base.show(io::IO, stream::Stream)
+    # Pretty printing for stream objects
     println(io, "Stream: $(stream.name)")
     println(io)
 
@@ -293,7 +298,7 @@ function  Base.show(io::IO, sl::StreamList)
         
         println(io)
         println(io, "Components:")
-        for (name, _) in stream.complist
+        for (name, _) in stream.comps
             println(io, "  ", name)
         end
 
@@ -325,28 +330,30 @@ end
 
 
 """
+
 Defines a Stream() with the specified name and component mass flows and
-add it to `sysstreams::StreamList`.
+add it to `fs.streams::StreamList`.
 
 The names of components must match those in the specified componentlist
-(`syscomps::ComponentList` in the example). 
+(`fs.comps::ComponentList` in the example). 
 
 
     @stream mass begin
         "Ethylene" --> 2.8053
         "Ethane" --> 27.06192
         "Hydrogen" --> 2.21738
-    end "Test" syscomps sysstreams
+    end "Test" fs
 
     @stream mole begin 
         "Ethylene" --> 0.1
         "Ethane" --> 0.9
         "Hydrogen" --> 1.1
-    end "Product" syscomps sysstreams 
+    end "Product" fs 
 
 The created Stream object will have data at a single timestamp of DateTime(0).
+
 """
-macro stream(flowtype::Symbol, ex::Expr, name::String, complist::Symbol, streamlist::Symbol)      
+macro stream(flowtype::Symbol, ex::Expr, name::String, fs::Symbol)      
     local comps = String[]
     local flows = Float64[]
     local timestamps = [DateTime(0)]
@@ -373,7 +380,7 @@ macro stream(flowtype::Symbol, ex::Expr, name::String, complist::Symbol, streaml
             end
         end
     end
-    return :($(esc(streamlist))[$name] = Stream($name, $(esc(complist)), $comps, $timestamps, $(flows'), $ismoleflow))
+    return :($(esc(fs.streams))[$name] = Stream($name, $(esc(fs.comps)), $comps, $timestamps, $(flows'), $ismoleflow))
 end
 
 
@@ -385,29 +392,40 @@ end
 
 
 """
-    function copystream!(list::StreamList, from::String, to::String)
 
-Copy a stream in the stream list
+    function copystream!(fs, from, to; factor=1.0)
+
+Copy a stream in the stream list of fs::Flowsheet
+`from` and `to` are the names of the source and destination streams
+The source stream's flows are multiplied by `factor` before being copied
+
 """
-function copystream!(list::StreamList, from::String, to::String; factor=1.0)   
-    fromstream = list[from]
+function copystream!(fs, from, to; factor=1.0)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
+
+    fromstream = fs.streams[from]
     comps = string.(colnames(fromstream.massflows))
     timestamps = timestamp(fromstream.massflows)
     flowdata = factor .* values(fromstream.massflows)
    
-    list[to] = Stream(to, fromstream.complist, comps, timestamps, flowdata)
+    fs.streams[to] = Stream(to, fs.comps, comps, timestamps, flowdata)
 
     return nothing
 end
 
 
 """
-    function deletestream!(list::StreamList, from::String)
 
-Delete a stream from the stream list
+    function deletestream!(fs, from)
+
+
+Delete a stream from the stream list in fs::Flowsheet
+`from` is the name of the stream to be deleted
+
 """
-function deletestream!(list::StreamList, from::String)
-    delete!(list.list, from)
+function deletestream!(fs, from)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
+    delete!(fs.streams.list, from)
 
     return nothing
 end
@@ -415,83 +433,111 @@ end
 
 
 """
-    function renamestream!(list::StreamList, from::String, to::String)
 
-Rename a stream in the stream list
+    function renamestream!(fs, from, to)
+
+Rename a stream in the stream list in fs::Flowsheet
+`from` and `to` are the old and new names of the stream
+
 """
-function renamestream!(list::StreamList, from::String, to::String)
-    fromstream = list[from]
+function renamestream!(fs, from::String, to::String)
+    fromstream = fs.streams[from]
     comps = string.(colnames(fromstream.massflows))
     timestamps = timestamp(fromstream.massflows)
     flowdata = values(fromstream.massflows)
 
-    list[to] = Stream(to, fromstream.complist, comps, timestamps, flowdata)
-    deletestream!(list, from)
+    fs.streams[to] = Stream(to, fromstream.comps, comps, timestamps, flowdata)
+    deletestream!(fs.streams, from)
     return nothing
 end
 
-"""
-    renamestream(strm::Stream, to::String)
 
-Return a copy of the stream with a new name
 """
-function renamestream(fromstream::Stream, to::String)
-    comps = string.(colnames(fromstream.massflows))
-    timestamps = timestamp(fromstream.massflows)
-    flowdata = values(fromstream.massflows)
 
-    return Stream(to, fromstream.complist, comps, timestamps, flowdata)
+    renamestream(stream, newname)
+
+Returns a new Stream object with the same information as the specificied stream, but a new name.
+
+"""
+function renamestream(stream, newname)
+    comps = names(stream.comps)
+    timestamps = timestamp(stream.massflows)
+    flowdata = values(stream.massflows)
+
+    return Stream(newname, stream.comps, comps, timestamps, flowdata)
+end    
+
+"""
+
+    addemptystream!(fs, name)
+
+Returns a stream with the same components and timestamp as the other streams in `fs::Flowsheet` with all flows set to zero. 
+
+"""
+function addemptystream!(fs, name::String)
+    # Take the first stream in the StreamList as a reference to get the components and timestamps.
+    # Here `first()` returns a `Pair` of a name and a stream, so we call `second()` to get the `Stream` object
+    refstrm = try
+        first(fs.streams).second
+    catch
+        throw(ArgumentError("fs must contain at least one stream"))
+    end
+
+    fs.streams[name] = Stream(name, fs.comps, string.(colnames(refstrm.massflows)), timestamp(refstrm.massflows), zeros(size(refstrm.massflows)))
+
+    return nothing
 end
 
 
 """
-    emptystream(list::StreamList, name::String)
 
-Returns a stream with the same components and timestamp as the specified StreamList and all flows set to zero. 
-"""
-function emptystream(list::StreamList, name::String)
-    # Take the first stream in the StreamList as a reference
-    refstrm = first(list).second
-
-    return Stream(name, refstrm.complist, string.(colnames(refstrm.massflows)), timestamp(refstrm.massflows), zeros(size(refstrm.massflows)))
-end
-
-
-"""
-    fixedstream(list::StreamList, name::String, flow<:Realfixedstream(list::StreamList, name::String, flow::Float64)
+    addfixedstream!(fs, name, flows, ismoleflow=false)
     
-Returns a stream with the same components and timestamp as the specified StreamList and all flows set to a specified constant value. 
+Returns a stream with the same components and timestamp as the other streams in `fs::Flowsheet` with all flows set to a specified constant values.
+Use the second form if no other streams exist, to specifiy the names of the components.
+
+`flows` should contain the constant flowrates for all the components in the stream.
+
 """
-function fixedstream(list::StreamList, name::String, flows::Array{Float64}, ismoleflow=false)
-    # Take the first stream in the StreamList as a reference
-    refstrm = first(list).second
+function addfixedstream!(fs, name, flows, ismoleflow=false)
+    # Take the first stream in the StreamList as a reference to get the components and timestamps.
+    # Here `first()` returns a `Pair` of a name and a stream, so we call `second()` to get the `Stream` object
+    refstrm = try
+        first(fs.streams).second
+    catch
+        throw(ArgumentError("fs must contain at least one stream"))
+    end
 
     flowdata = repeat(flows', outer = length(timestamp(refstrm.massflows)))
-    return Stream(name, refstrm.complist, string.(colnames(refstrm.massflows)), timestamp(refstrm.massflows), flowdata, ismoleflow)
+    fs.streams[name] = Stream(name, refstrm.comps, string.(colnames(refstrm.massflows)), timestamp(refstrm.massflows), flowdata, ismoleflow)
+
+    return nothing
 end
 
 
 """
 
-function readstreamhistory(filename, streamname, complist; ismoleflow=false)
+function readstreamhistory!(fs, streamname, filename; ismoleflow=false)
 
-Reads in a stream history file (CSV file).
+Reads in a stream history file (CSV file) into the stream in fs.streams.
 
 The data should be in the format of TimeStamp (yyyy/mm/dd HH:MM) in first column,
 then each subsequent column holding a component's mass flows, with the heading the
 name of the component.
 
-**The names should match those in the system component list that is passed to the function.**
+**The names should match those in the specified component list that is passed to the function.**
 
 """
-function readstreamhistory(filename, streamname, complist; ismoleflow=false)
+function readstreamhistory!(fs, streamname, filename; ismoleflow=false)
 
     data, header = readdlm(filename, ',', '\n', header=true)
     comps = string.(header[2:end]) # readdlm returns an array of AbstractStrings for some reason
     flows = data[:, 2:end]
     timestamps = DateTime.(data[:, 1], "yyyy/mm/dd HH:MM")
 
-    return Stream(streamname, complist, comps, timestamps, flows, ismoleflow)
+    fs.streams[streamname] = Stream(streamname, fs.comps, comps, timestamps, flows, ismoleflow)
+
+    return nothing
 end
 
 
@@ -515,17 +561,35 @@ end
 
 
 """
-    refreshcomplist(streamlist::StreamList)
+
+    writestreamhistories(fs, filenames, moleflow=false)
+
+Writes stream history files (CSV files) for each stream in a Flowsheet, fs.
+`filenames` is a dictionary of stream names and filenames, e.g. `filenames["stream1"] = "stream1.csv"`.
+
+"""
+function writestreamhistories(fs, filenames, moleflow=false)
+
+    for (name, stream) in fs.streams
+        writestreamhistory(stream, filenames[name], moleflow)
+    end
+
+    return nothing
+end
+
+
+"""
+    refreshcomplist(fs)
 
 Refresh all the streams in the StreamList to reflect components added to the StreamList after the streams were created.
 """
-function refreshcomplist(streamlist::StreamList)
-    for (name, stream) in streamlist
-        complist = stream.complist
+function refreshcomplist(fs)
+    for (name, stream) in fs.streams
+        complist = stream.comps
         comps = string.(colnames(stream.massflows))
         timestamps = timestamp(stream.massflows)
         flowdata = values(stream.massflows)
 
-        streamlist[name] = Stream(name, complist, comps, timestamps, flowdata)
+        fs.streams[name] = Stream(name, complist, comps, timestamps, flowdata)
     end
 end

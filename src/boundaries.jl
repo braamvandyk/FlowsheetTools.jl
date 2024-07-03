@@ -8,8 +8,8 @@ struct BalanceBoundary
     name::String
 
     # Units included in the boundary
-    unitlist::UnitOpList
-    units::Vector{String}
+    unitops::UnitOpList
+    included_units::Vector{String}
 
     # Number of historic data points
     numdata::Integer
@@ -31,10 +31,13 @@ struct BalanceBoundary
 
     # Internal constructor to ensurte that all inlets and outlets have the same number of historic data points
     # and identical timestamps. It is only required here in case the user doesn't use the outer constructor
-    function BalanceBoundary(name, unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
+    function BalanceBoundary(name, units, included_units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
+
         total_in.numdata != total_out.numdata && throw(DimensionMismatch("all in/outlets must must have similar history lengths."))
+
         !all(timestamp(total_in.massflows) .== timestamp(total_out.massflows)) && throw(DimensionMismatch("all in/outlets must must have identical timestamps."))
-        new(name, unitlist, units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
+
+        new(name, units, included_units, numdata, inlets, outlets, total_in, total_out, closure, atomclosures)
     end
 end
 
@@ -52,7 +55,7 @@ end
 
 
 """
-    BalanceBoundary(name, unitlist, units)
+    BalanceBoundary(name, unitops, included_units)
 
 Constructor for a BalanceBoundary. Inputs are a UnitOpList and and array of names of `UnitOp`s in the list
 that are inside the boundary. Inlet and outlet streams crossing the boundary are automatically calculated.
@@ -62,9 +65,9 @@ Will error if there are either no inlets or outlets.
 Since not all atoms referenced in the streams will be present, closures for atoms not present will be indicated by
 setting the values to -1.0
 """
-function BalanceBoundary(name::String, unitlist::UnitOpList, units::Vector{String})
+function BalanceBoundary(name, unitops, included_units)
     # Get the streams that cross the boundary
-    inlets, outlets, _ = boundarystreams(unitlist, units)
+    inlets, outlets, _ = boundarystreams(unitops, included_units)
 
     # Convert to list of names
     inletnames = String[]
@@ -102,7 +105,7 @@ function BalanceBoundary(name::String, unitlist::UnitOpList, units::Vector{Strin
         atomclosures[datum] = _atomclosures
     end
     atomclosures_ta = TimeArray(timestamp(closure), atomclosures, [Symbol("Elemental Closures")])
-    BalanceBoundary(name, unitlist, units, numdata, inletnames, outletnames, total_in, total_out, closure, atomclosures_ta)
+    BalanceBoundary(name, unitops, included_units, numdata, inletnames, outletnames, total_in, total_out, closure, atomclosures_ta)
 end
 
 
@@ -132,9 +135,9 @@ function Base.setindex!(A::BoundaryList, X::BalanceBoundary, idx::String)
         # Get the first item in the `list` field. As `list` is a `Dict`, this returns a `Pair`.
         # We get the value entry using the `second` field of the `Pair`, which returns a `Stream`,
         # of which we get the `complist` field.
-        currentlist = first(A.list).second.unitlist
+        currentlist = first(A.list).second.unitops
 
-        X.unitlist != currentlist && throw(ArgumentError("all boundaries in BoundaryList must reference the same UnitOpList"))
+        X.unitops != currentlist && throw(ArgumentError("all boundaries in BoundaryList must reference the same UnitOpList"))
 
         A.list[idx] = X
     end
@@ -165,7 +168,7 @@ end
 # Pretty printing for BalanceBoundary objects
 function Base.show(io::IO, b::BalanceBoundary)
     println(io, "Balance Boundary:\n")
-    println(io, "Enclosed units: ", [u for u in b.units])
+    println(io, "Enclosed units: ", [u for u in b.included_units])
     println(io)
     println(io, "Closure:")
     pretty_table(io, b.closure, display_size=(14, -1))
@@ -209,31 +212,35 @@ end
 #----------------------------------------------------------------------------
 
 """
+
     @boundary begin
         unitops --> ["Reactor", "Membrane"]
-    end b1 sysunitops sysboundaries
+    end "B1" fs
 
-Create a boundary, b1, that includes UnitOps "Reactor" amd "Membrane" from the UnitOpsList sysunitops and add it to BoundaryList sysboundaries.
+Create a boundary, that includes UnitOps "Reactor" amd "Membrane" from the UnitOpsList sysunitops and add it to BoundaryList sysboundaries.
+Store it in fs.boundaries["B1"]
 
     @boundaryhist begin
         unitops --> ["RX101"]
-    end b2 sysunitstops sysboundaries
+    end "B2" fs
 
-Create a boundary, b2, that includes UnitOps "RX101" from the UnitOpsList sysunitops and add it to BoundaryList sysboundaries.
+Create a boundary, that includes UnitOps "RX101" from the UnitOpsList sysunitops and add it to BoundaryList sysboundaries.
+Store it in fs.boundaries["B2"]
+
 """
-macro boundary(ex::Expr, name::String, unitoplist::Symbol, boundarylist::Symbol)      
-    local unitops = String[]
+macro boundary(ex::Expr, name::String, fs::Symbol)      
+    local units = String[]
     
     for line in ex.args
         match_comp = @capture(line, unitops --> [uops__])
         if match_comp
             for uop in uops
-                push!(unitops, uop)
+                push!(units, uop)
             end
         end
     end
 
-    return :($(esc(boundarylist))[$name] = BalanceBoundary($name, $(esc(unitoplist)), $unitops))
+    return :($(esc(fs)).boundaries[$name] = BalanceBoundary($name, $(esc(fs)).unitops, $units))
 end
 
 
@@ -263,11 +270,11 @@ end
 
 
 """
-    inlets, outlets, internals = boundarystreams(unitlist, units)
+    inlets, outlets, internals = boundarystreams(units, included_units)
 
 Find the streams that enter and leave the boundary that includes the specified unitops.
 """
-function boundarystreams(unitlist::UnitOpList, units::Vector{String})
+function boundarystreams(unitops, included_units)
     #Figure out which streams cross the boundary:
     #    1. Take all the input stream from the units
     #    2. Subtract the ones that are product stream, as they will be internal streams
@@ -278,16 +285,16 @@ function boundarystreams(unitlist::UnitOpList, units::Vector{String})
     outlets = Stream[]
     internals = Stream[]
 
-    # 1. Take all the input stream from the units 
-    for unitname in units
-        unit = unitlist[unitname]
+    # 1. Take all the input streams from the units 
+    for unitname in included_units
+        unit = unitops[unitname]
 
         for feedname in unit.inlets
-            feed = unit.streamlist[feedname]
+            feed = unit.streams[feedname]
             push!(inlets, feed)
         end
         for prodname in unit.outlets
-            prod = unit.streamlist[prodname]
+            prod = unit.streams[prodname]
             push!(outlets, prod)
         end
     end

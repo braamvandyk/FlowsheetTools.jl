@@ -50,7 +50,7 @@ Example:
 
 """
 function componentplitter!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
-    complist = first(streamlist).second.complist
+    complist = first(streamlist).second.comps
     numcomps = length(complist)
     numouts = length(outlets)
     totalin = sum(streamlist[inlets])

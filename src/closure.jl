@@ -19,7 +19,7 @@ function calccorrections_anchor(boundary::BalanceBoundary, anchor::String, custo
     setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}()) 
     # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
-    streamlist = first(boundary.unitlist.list).second.streamlist 
+    streamlist = first(boundary.unitlist.list).second.streams 
 
     corrections = Dict{String, Float64}()
 
@@ -115,7 +115,7 @@ function calccorrections(boundarylist::BoundaryList; customerror=nothing, anchor
     # Pull the streamlist of the first unit op in first boundary in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
     firstboundary = first(values(boundarylist.list))
-    streamlist = first(firstboundary.unitlist.list).second.streamlist  
+    streamlist = first(firstboundary.unitops.list).second.streams  
 
     # Places to store names on inlets and outlets for each boundary
     allinlets = Vector{Vector{String}}(undef, length(boundarylist))
@@ -257,8 +257,8 @@ function closemb!(boundaries::BoundaryList, corrections::Dict{String, Float64})
     # Pull the streamlist of the first unit op in the list. Since this is from a UnitOpList,
     # all of the unit ops must have the same stream list
     firstboundary = first(values(boundaries.list))
-    unitlist = firstboundary.unitlist
-    streamlist = first(unitlist.list).second.streamlist
+    unitlist = firstboundary.unitops
+    streamlist = first(unitlist.list).second.streams
 
     # Apply the stream corrections
     for stream in keys(corrections)
@@ -268,7 +268,7 @@ function closemb!(boundaries::BoundaryList, corrections::Dict{String, Float64})
     #Recreate the boundaries
     for b in boundaries
         name = b.second.name
-        units = b.second.units
+        units = b.second.included_units
         boundaries[name] = BalanceBoundary(name, unitlist, units)
     end
 

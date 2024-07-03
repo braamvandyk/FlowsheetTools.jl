@@ -10,41 +10,59 @@
 
 using FlowsheetTools, Statistics
 
+# # The Flowsheet
+
+# The `Flowsheet` is the central object in FlowsheetTools.jl. It contains a list of unit operations, a list of streams, a list of mass balance boundaries, and a list of components. You need only create the flowsheet. It will manange the other components automatically.
+# Let's create an empty flowsheet and then build it out.
+
+fs = Flowsheet()
+
+# As you can see, the flowsheet is empty. It has no unit operations, streams, mass balance boundaries, or components yet. You will also see an empty execution order. It is possible to ask the flowsheet to execute all of the unitops it comtains. The execution order sets the order in which they execute.
+# Remember, that this is not a process simulator. There is no flowsheet convergence algorithm. The unit operations are of the types needed to allow missing information to be calculated to close a mass balance.
+# These include mixers, various splitters and a simple stoichiometric reactor.
+
 # ## Components
 # The most basic building block we need is a set of components. A component in FlowsheetTools.jl is a fairly simple object. It has a name, so we can refer to it, and contains the list of atoms and the number of each that make up the component. The molar mass of the component is automatically calculated and also stored.
 
-# We store all the components in a ComponentList, so we have a container to find them in, when needed. This makes things a lot easier than trying to keep track of a host of "loose" component variables. While nothing stops you from defining multiple ComponentLists, having more than one is not best practise.
-# In fact, to keep things consistent, the containers for streams (a `StreamList`) will insist that all streams contained in it refer to a single `ComponentList`, so it is much better to stick to one `ComponentList` at a time.
+# We store all the components in a `ComponentList`, so we have a container to find them in, when needed.
+# You don't need to directly create and manage a `ComponentList`. The `Flowsheet` manages the `ComponentList` for you.
+# `ComponentList` is a wrapper around a Dict{String, Component} and can be in the same way as such any `Dict` in Julia, using the component names to index. Now that we have a container to put them into, we can add some components.
 
-# Let's start by creating our `ComponentList` to hold all of the components we have present in our flowsheet.
+# Let's look at the component list we have in our flowsheet:
 
-syscomps = ComponentList()
+fs.comps
 
-# `ComponentList` is a wrapper around a Dict{String, Component} and can be in the same way as such a `Dict`, using the component names to index. Now that we have a container to put them into, we can add some components.
+# Not much to see. Just an empty list. Let's add some components.
 
 # Since it is likely that we shall re-use components, they can be stored in files, so we don't need to define them every time. Let's read in some components created earlier and stored in the sub-folder `components` under the active folder:
 
-count = readcomponentlist!(syscomps, "components", ["Ethylene", "Ethane", "Hydrogen"])
+count = readcomponentlist!(fs, "components", ["Ethylene", "Ethane", "Hydrogen"])
 
-# The function `readcomponents` returns the number of components read in - 3 in this case. We specified the names of the components to read in from the folder. There can be any number of files stored there. We also supplied the empty component list (`syscomps`) as the first argument. This container is modified in-place.
+# The function `readcomponents` returns the number of components read in - 3 in this case. We specified the names of the components to read in from the folder. There can be any number of files stored there. We also supplied the flowsheet (`fs`) as the first argument.
+# Since reading in components modifies (mutates) the flowsheet, the function name is ended in an exclamation mark, as is the convention in Julia.
 
-syscomps
+fs.comps
 
+# Now we have three components in our flowsheet.
 # To access a component in the component list, we index using the name of the component.
 
-syscomps["Ethylene"]
+fs.comps["Ethylene"]
 
 # If we need to define new components, ther are two ways to go about this.
 
-# The first is by using the @comp macro. It takes a list of atoms and a number of each, separated by a -->. We also suply a name for the component, which is stored in the `ComponentList`, and the `ComponentList` to which to add it.
+# The first is by using the @comp macro. It takes a list of atoms and a number of each, separated by a -->. We also suply a name for the component, so we can find it in the `ComponentList` it will be stored in, and the name of the `Flowsheet` to which this `ComponentList` belongs.
 
 @comp begin
     N --> 2
-end "Nitrogen" syscomps
+end "Nitrogen" fs
+
+# And we can check that is was added to our flowsheet:
+
+fs.comps
 
 # The second way is to create the components by calling the constructor directly. This is most useful when creating lists of components, such a homologous series. For example, we could create the n-paraffins from C1 to C10 as follows: 
 
-cl = ComponentList()
+cl = ComponentList() # Create a new component list that is NOT in our flowsheet. We are throwing this away when we are done.
 for n in 1:10
     if n == 1
         name = "CH4"
@@ -57,14 +75,27 @@ cl
 #-
 cl["C10H22"]
 
+# Here we created a "dummy" component list, so as to not add these components to our flowsheet. If we wanted to add them to the flowsheet, the code would look like this:
+
+for n in 1:10
+    if n == 1
+        name = "CH4"
+    else
+        name = "C$(n)H$(2n+2)"
+    end
+    fs.comps[name] = Component(name, ["C", "H"], [n, 2n+2])
+end
+
+# As you can see, the internal `ComponentList` in our flowsheet is called `fs.comps`, where `fs` is of course the name of our flowsheet.
+
 # We can save the components to file to re-use later. `writecomponents` takes the path to write to, and the specific component to write. It returns the number of bytes written.
 
-writecomponent(joinpath("components/", "Nitrogen.comp"), syscomps["Nitrogen"])
+writecomponent(joinpath("components/", "Nitrogen.comp"), fs.comps["Nitrogen"])
 
 
 # ## Streams
 
-# Now that we have components (and a handy container to store them in), we can create streams for our process. Each stream contains a list of components and their flowrates. You can specify either the mass or moalr flows when creating the stream and the other will be automatically calculated. The constructor will also calculate the flowrates for each type of atom in the stream.
+# Now that we have components, we can create streams for our process. Each stream contains a list of components and their flowrates. You can specify either the mass or moalr flows when creating the stream and the other will be automatically calculated. The constructor will also calculate the flowrates for each type of atom in the stream.
 
 # There are of course two ways in which we would use streams. Either with a single, current value for the flowrate and composition, or with a set of historical values of these. The former is useful for simulations, while the latter is useful for analysis. In either case, the flows are stored in `TimeArrays` from `TimeSeries.jl`. In cases where we only have a single flowrate, this is a simply `TimeArray` of length 1, with an arbitrary (zero) timestamp asigned to the value.
 

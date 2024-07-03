@@ -5,28 +5,48 @@
 #----------------------------------------------------------------------------
 
 struct Flowsheet
-    unitlist::UnitOpList
-    units::Vector{String}
+    comps::ComponentList
+    streams::StreamList
+    unitops::UnitOpList
+    boundaries::BoundaryList
 
-    execution_order::Vector{Int}
+    rununits::Vector{String}
+    runorder::Vector{Int}
 end
 
 
 function (fs::Flowsheet)(neworder = nothing; showoutput=true)
     if isnothing(neworder)
         for i in fs.execution_order
-            showoutput && println(i, "  ", fs.units[i])
-            fs.unitlist[fs.units[i]]()
+            showoutput && println(i, "  ", fs.unitops[i])
+            fs.unitlist[fs.unitops[i]]()
         end
     else
         for i in neworder
-            u = fs.units[i]
-            showoutput && println(i, "  ", fs.units[i])
+            u = fs.unitops[i]
+            showoutput && println(i, "  ", fs.unitops[i])
             u()
         end
     end
 
     return nothing
+end
+
+
+#----------------------------------------------------------------------------
+#
+#----Constructors------------------------------------------------------------
+#
+#----------------------------------------------------------------------------
+
+
+function Flowsheet()
+    complist = ComponentList()
+    streamlist = StreamList()
+    unitlist = UnitOpList()
+    boundarylist = BoundaryList()
+
+    return Flowsheet(complist, streamlist, unitlist, boundarylist, String[], Int[])
 end
 
 
@@ -39,8 +59,8 @@ end
 
 function Base.show(io::IO, fs::Flowsheet)
     d = OrderedDict{Int, String}()
-    for i in 1:length(fs.execution_order)
-        d[fs.execution_order[i]] = fs.units[i]
+    for i in 1:length(fs.runorder)
+        d[fs.execution_order[i]] = fs.unitops[i]
     end
     sort!(d)
 
@@ -52,44 +72,29 @@ function Base.show(io::IO, fs::Flowsheet)
     end
 end
 
+
 #----------------------------------------------------------------------------
 # 
 #----Utilities---------------------------------------------------------------
 # 
 #----------------------------------------------------------------------------
 
+
 """
-    addunitop!(fs::Flowsheet, u::String)
-    addunitop!(fs::Flowsheet, us::Vector{String})
+    addtorun!(fs::Flowsheet, u::String)
+
 
 Add a single unit operation, or an array of unit operations to the execution list of a Flowsheet object.
 Default execution order is set as the order in which the unit operations are added.
 """
-function addunitop!(fs::Flowsheet, u::String)
+function addtorun!(fs::Flowsheet, u::String)
     # Only add if it is not already there.
-    if isnothing(findfirst(x -> x == u, fs.units))
-        if haskey(fs.unitlist.list, u)
-            push!(fs.units, u)
-            push!(fs.execution_order, length(fs.execution_order) + 1)
+    if isnothing(findfirst(x -> x == u, fs.rununits))
+        if haskey(fs.unitops.list, u)
+            push!(fs.rununits, u)
+            push!(fs.runorder, length(fs.runorder) + 1)
         else
-            throw(ArgumentError("unitop $u not defined in list $(fs.unitlist)"))
-        end
-    end
-
-    return nothing
-end
-
-
-function addunitop!(fs::Flowsheet, us::Vector{String})
-    for u in us
-        # Only add if it is not already there.
-        if isnothing(findfirst(x -> x == u, fs.units))
-            if haskey(fs.unitlist.list, u)
-                push!(fs.units, u)
-                push!(fs.execution_order, length(fs.execution_order) + 1)
-            else
-                throw(ArgumentError("unitop $u not defined in list $(fs.unitlist)"))
-            end
+            throw(ArgumentError("unit operation $u is not defined in list of unit operations for $fs"))
         end
     end
 
@@ -103,10 +108,10 @@ end
 Removed the specified unit operation(s) from the Flowsheet object, as well as from its execution order.
 """
 function removeunitop!(fs::Flowsheet, u::String)
-    index = findfirst(x -> x == u, fs.units)
+    index = findfirst(x -> x == u, fs.unitops)
     #  Ignore if not there
     if !isnothing(index)
-        popat!(fs.units, index)
+        popat!(fs.unitops, index)
         for i in fs.execution_order
             #  Remove from the execution order
             if i == index
@@ -123,10 +128,10 @@ end
 
 function removeunitop!(fs::Flowsheet, ::Vector{String})
     for u in us
-        index = findfirst(x -> x == u, fs.units)
+        index = findfirst(x -> x == u, fs.unitops)
         #  Ignore if not there
         if !isnothing(index)
-            popat!(fs.units, index)
+            popat!(fs.unitops, index)
             for i in fs.execution_order
                 #  Remove from the execution order
                 if i == index
@@ -209,7 +214,7 @@ function generateBFD(fs::Flowsheet, filename = nothing; displaybfd=true)
         
 =#
 
-    inlets, outlets, internals = boundarystreams(fs.unitlist, fs.units)
+    inlets, outlets, internals = boundarystreams(fs.unitops, fs.rununits)
     
     # Convert to list of names
     inletnames = String[]
@@ -230,8 +235,8 @@ function generateBFD(fs::Flowsheet, filename = nothing; displaybfd=true)
     streams = Tuple{String, String, String}[]
     for inlet in inletnames
         # Find the block that this stream connects to
-        for unitname in fs.units
-            unit = fs.unitlist[unitname]
+        for unitname in fs.rununits
+            unit = fs.unitops[unitname]
             if inlet in unit.inlets
                 push!(streams, (" ", replace(inlet, r"\s+" =>s""), replace(unitname, r"\s+" =>s"")))
                 break
@@ -246,8 +251,8 @@ function generateBFD(fs::Flowsheet, filename = nothing; displaybfd=true)
         thissink = ""
 
         # Find the blocks that this stream connects to
-        for unitname in fs.units
-            unit = fs.unitlist[unitname]
+        for unitname in fs.rununits
+            unit = fs.unitops[unitname]
             if internal in unit.outlets
                 thissource = unitname
                 foundsource = true
@@ -263,8 +268,8 @@ function generateBFD(fs::Flowsheet, filename = nothing; displaybfd=true)
 
     for outlet in outletnames
         # Find the block that this stream connects to
-        for unitname in fs.units
-            unit = fs.unitlist[unitname]
+        for unitname in fs.rununits
+            unit = fs.unitops[unitname]
             if outlet in unit.outlets
                 push!(streams, (replace(unitname, r"\s+" =>s""), replace(outlet, r"\s+" =>s""), " "))
                 break
@@ -332,3 +337,18 @@ end
 
 
 
+"""
+
+    componentnames(fs)
+
+Return the list of names of components in the included `ComponentList` in the `Flowsheet`, fs.
+
+# Examples
+```julia
+julia> componentnames(fs)
+```
+
+"""
+function componentnames(fs)
+    return collect(keys(fs.comps.list))
+end

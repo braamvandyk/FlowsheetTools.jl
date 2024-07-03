@@ -12,14 +12,14 @@ Calculate the fractional conversion of the component over the balance boundary
 """
 function conversion(b::BalanceBoundary, component::String)
     # Find the component in the feed
-    if component in keys(b.total_in.complist.list)
+    if component in keys(b.total_in.comps.list)
         feeds = values(b.total_in.massflows[Symbol(component)])
     else
         feeds = zeros(length(b.total_in.massflows))
     end
 
     # Find the component in the product
-    if component in keys(b.total_in.complist.list)
+    if component in keys(b.total_in.comps.list)
         prods = values(b.total_out.massflows[Symbol(component)])
     else
         prods = zeros(length(b.total_out.massflows))
@@ -51,28 +51,28 @@ Calculate the molar selectivity of the converted reactant to the product, over t
 """
 function molar_selectivity(b::BalanceBoundary, reactant::String, product::String)
     # Find the reactant inflow
-    if reactant in keys(b.total_in.complist.list)
+    if reactant in keys(b.total_in.comps.list)
         r_ins = values(b.total_in.moleflows[Symbol(reactant)])
     else
         r_ins = zeros(length(b.total_in.moleflows))
     end
 
     # Find the reactant outflow
-    if reactant in keys(b.total_out.complist.list)
+    if reactant in keys(b.total_out.comps.list)
         r_outs = values(b.total_out.moleflows[Symbol(reactant)])
     else
         r_ins = zeros(length(b.total_out.moleflows))
     end
 
     # Find the product inflow
-    if product in keys(b.total_in.complist.list)
+    if product in keys(b.total_in.comps.list)
         p_ins = values(b.total_in.moleflows[Symbol(product)])
     else
         p_ins = zeros(length(b.total_in.moleflows))
     end
 
     # Find the product outflow
-    if product in keys(b.total_out.complist.list)
+    if product in keys(b.total_out.comps.list)
         p_outs = values(b.total_out.moleflows[Symbol(product)])
     else
         p_ins = zeros(length(b.total_out.moleflows))

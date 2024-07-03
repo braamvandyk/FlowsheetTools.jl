@@ -1,44 +1,42 @@
 using FlowsheetTools
 
-syscomps = ComponentList()
-count = readcomponentlist!(syscomps, "components", ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"])
+fs = Flowsheet()
+
+count = readcomponentlist!(fs, "components", ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"])
 
 
-sysstreams = StreamList() # Create a new container and dump the previous streams
-sysstreams["C2"] = readstreamhistory(joinpath("streamhistories", "C2.csv"), "C2", syscomps; ismoleflow=true)
-sysstreams["H2"] = readstreamhistory(joinpath("streamhistories", "Hydrogen.csv"), "H2", syscomps; ismoleflow=true)
-sysstreams["Product"] = readstreamhistory(joinpath("streamhistories", "Product.csv"), "Product", syscomps; ismoleflow=true)
-sysstreams["Mixed"] = emptystream(sysstreams, "Mixed");
-sysstreams["Product1"] = emptystream(sysstreams, "Product1");
-sysstreams["Product1a"] = emptystream(sysstreams, "Product1a");
-sysstreams["Product1b"] = emptystream(sysstreams, "Product1b");
-sysstreams["Product2"] = emptystream(sysstreams, "Product2");
-sysstreams["Product3"] = emptystream(sysstreams, "Product3");
-sysstreams["Product4"] = emptystream(sysstreams, "Product4");
+readstreamhistory!(fs, "C2", joinpath("streamhistories", "C2.csv"); ismoleflow=true)
+readstreamhistory!(fs, "H2", joinpath("streamhistories", "Hydrogen.csv"); ismoleflow=true)
+readstreamhistory!(fs, "Product", joinpath("streamhistories", "Product.csv"); ismoleflow=true)
+addemptystream!(fs, "Mixed");
+addemptystream!(fs, "Product1");
+addemptystream!(fs, "Product1a");
+addemptystream!(fs, "Product1b");
+addemptystream!(fs, "Product2");
+addemptystream!(fs, "Product3");
+addemptystream!(fs, "Product4");
 
-sysstreams["Dummy"] = fixedstream(sysstreams, "Dummy", [10.0, 0.0, 0.0, 0.0, 0.1])
-
-sysunitops = UnitOpList()
+addfixedstream!(fs, "Dummy", [10.0, 0.0, 0.0, 0.0, 0.1])
 
 @unitop begin
     inlets --> ["H2", "C2"]
     outlets --> ["Mixed"]
     calc --> mixer!
-end "Mixer" sysstreams sysunitops
-sysunitops["Mixer"]()
+end "Mixer" fs
+fs.unitops["Mixer"]()
 
 @unitop begin
     inlets --> ["Mixed"]
     outlets --> ["Product"]
-end "Reactor" sysstreams sysunitops
+end "Reactor" fs
 
 @unitop begin
     inlets --> ["Product"]
     outlets --> ["Product1", "Product2"]
     calc --> flowsplitter!
     params --> [0.5]
-end "ProductSplitter" sysstreams sysunitops
-sysunitops["ProductSplitter"]()
+end "ProductSplitter" fs
+fs.unitops["ProductSplitter"]()
 
 @unitop begin
     inlets --> ["Product1"]
@@ -48,53 +46,54 @@ sysunitops["ProductSplitter"]()
         "Hydrogen" => Dict(["Product1a" => 0.5]),
         "Ethane" => Dict(["Product1b" => 0.3])
     ])
-end "ComponentSplitter" sysstreams sysunitops
-sysunitops["ComponentSplitter"]()
+end "ComponentSplitter" fs
+fs.unitops["ComponentSplitter"]()
 
 @unitop begin
     inlets --> ["Product1a", "Product1b", "Product2"]
     outlets --> ["Product3"]
     calc --> mixer!
-end "Mixer2" sysstreams sysunitops
-sysunitops["Mixer2"]()
+end "Mixer2" fs
+fs.unitops["Mixer2"]()
 
-sysstreams["Product"] ≈ sysstreams["Product3"]
+fs.streams["Product"] ≈ fs.streams["Product3"]
 
-EthyleneHydrogenation(frac) = Reaction(syscomps, ["Ethylene", "Hydrogen"], ["Ethane"], [1.0, 1.0], [1.0], "Ethylene", frac)
+EthyleneHydrogenation(frac) = Reaction(fs, ["Ethylene", "Hydrogen"], ["Ethane"], [1.0, 1.0], [1.0], "Ethylene", frac)
 
 @unitop begin
     inlets --> ["Product3"]
     outlets --> ["Product4"]
     calc --> stoichiometric_reactor!
     params --> [EthyleneHydrogenation(0.5)]
-end "Reactor2" sysstreams sysunitops
-sysunitops["Reactor2"]()
+end "Reactor2" fs
+fs.unitops["Reactor2"]()
 
 
-fs = Flowsheet(sysunitops, ["Mixer", "Reactor", "ProductSplitter", "ComponentSplitter", "Mixer2", "Reactor2"], [1, 2, 3, 4, 5, 6])
-generateBFD(fs, "./myflowsheet.svg")
-
-sysstreams["Mixed"] = 1.1*sysstreams["Mixed"]
+# generateBFD(fs, "./myflowsheet.svg")
 
 
 
+# CONTINUE HERE
 
-sysboundaries = BoundaryList()
+
+fs.streams["Mixed"] = 1.1*fs.streams["Mixed"]
+
+
 
 @boundary begin
     unitops --> ["Mixer"]
-end "B1" sysunitops sysboundaries
+end "B1" fs
 
- @boundary begin
+@boundary begin
     unitops --> ["Reactor", "ProductSplitter"]
-end "B2" sysunitops sysboundaries
+end "B2" fs
 
-sysboundaries["B1"]
-sysboundaries["B2"]
+fs.boundaries["B1"]
+fs.boundaries["B2"]
 
-corrections = calccorrections(sysboundaries; λ = 0.0, anchor = "H2")
-closemb!(sysboundaries, corrections)
+corrections = calccorrections(fs.boundaries; λ = 0.0, anchor = "H2")
+closemb!(fs.boundaries, corrections)
 
-sysboundaries["B1"]
-sysboundaries["B2"]
+fs.boundaries["B1"]
+fs.boundaries["B2"]
 

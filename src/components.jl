@@ -78,6 +78,7 @@ function Base.iterate(A::ComponentList, state)
     return iterate(A.list, state)
 end
 
+
 #----------------------------------------------------------------------------
 #
 #----Pretty Printing---------------------------------------------------------
@@ -114,11 +115,11 @@ end
     @comp begin
         C --> 2
         H --> 6
-    end "Ethane" syscomps
+    end "Ethane" fs
 
-Defines a Component with the specified name and atomic composition and add it to syscomps::ComponenList
+Defines a Component with the specified name and atomic composition and add it to fs.comps, a ComponentList
 """
-macro comp(ex::Expr, name::String, complist::Symbol)      
+macro comp(ex::Expr, name::String, fs::Symbol)      
     local atoms = String[]
     local counts = Int[]
 
@@ -139,7 +140,7 @@ macro comp(ex::Expr, name::String, complist::Symbol)
         end
     end
     
-    return :($(esc(complist))[$name] = Component($name, $atoms, $counts))
+    return :($(esc(fs)).comps[$name] = Component($name, $atoms, $counts))
 end
 
 
@@ -174,11 +175,13 @@ end
 
 
 """
-    function readcomp(filename::String)
+*Internal use only!* Use readcomponentlist!() instead.
+
+    function readcomp(filename)
 
 Read a Component struct from a file.
 """
-function readcomponent(filename::String)
+function readcomponent(filename)
     f = open(filename, "r")
     lines = readlines(f)
     close(f)
@@ -203,34 +206,31 @@ end
 
 
 """
-    function readcomponentlist(complist::ComponentList, folder::String, filenames::Vector{String})
+    function readcomponentlist!(fs, foldername, filenames)
 
-Read a list of components into a ComponentList
+Read a list of components into a ComponentList, fs.comps.
 The folder is specified and `filenames` contains a list of filenames without extentions.
-The component files are .json files created with `writecomp()`
+The component files are text files, created with `writecomp()`
 """
-function readcomponentlist!(complist::ComponentList, folder::String, filenames::Vector{String})
+function readcomponentlist!(fs, foldername, filenames)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
     count = 0
     # Get the list of files available in the folder
-    available = readdir(folder)
+    available = readdir(foldername)
     
     for fn in filenames
         fname = fn * ".comp"
         if lowercase(fname) in available
-            complist[fn] = readcomponent(joinpath(folder, fname))
+            fs.comps[fn] = readcomponent(joinpath(foldername, fname))
             count += 1
+        else
+            @warn "Component file $(fname) not found."
         end
     end
 
     return count
 end
 
-
-"""
-    names(complist::ComponentList)
-
-Return the list of names of components in the ComponenList.
-"""
-function names(complist::ComponentList)
-    return collect(keys(complist.list))
+function names(cl)
+    return collect(keys(cl.list))
 end
