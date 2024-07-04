@@ -14,8 +14,8 @@ we can discuss ideas and do this together.
 
 ## Current status
 
-The library is finally in package form and complete to a usable point. The demos.jl / demos.pynb file shows the current capabilities.
-TODO.md lists the things I currently want to do.
+The library is finally in package form and complete to a usable point. The [demos.jl / demos.pynb](https://github.com/braamvandyk/FlowsheetTools.jl/blob/main/demos.ipynb)
+file shows the current capabilities. TODO.md lists the things I currently want to do.
 
 ## The backstory
 
