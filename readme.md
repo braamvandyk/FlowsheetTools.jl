@@ -24,8 +24,7 @@ components, and then later streams. And then the thing grew a life of its own.
 
 The vision was to build a basic toolkit to define flowsheets in order to calculate KPIs
 and reconcile mass balances. This is mostly there, expect that the mass balance reconciliation
-algorithms are extremely primitive - I have better methods, I just need to sit down and program
-them.
+algorithms are a bit basic. More sophisticated methods are available and can be added.
 
 In the process I thought it may also be useful to be able to define a simple function to
 calculate the product streams from the feed streams for each unit operation. The idea is not
@@ -37,20 +36,15 @@ is there REALLY a need for that? After all, we already have Aspen, Pro/II etc.
 
 After the idea came to add "active" unit ops, it occured to me that it would be a really good
 idea to have all of the components and streams in some form of global structure, rather than
-a scattering of loose variables. This required a significant rewrite and passing the system
-component list to all streams and the system stream list to all unit ops.
+a scattering of loose variables. This required a significant rewrite, followed by another and then
+yet another, as I refined the user interface. We are now at the point where you just define a flowsheet
+container, which holds all of the components, streams, unit operations, mass balance boundaries etc.
+There is always room for improvement, but at least I now feel that I can show this to people who may
+want to use the tool.
 
 Now, you at least have the option to iterate through all components and streams, should you
 need to do that, and everything in the flowsheet is nice and consistent - one list of components, 
-used in one list of streams.
+used in one list of streams, one lost of unit operations etc.
 
-I sincerely hope this proves to be useful, since it required a lot of rework, including modifying
-the macros, months after I forgot how I wrote them in the first place :-(
-
-The streams hold an array of the names of the components actually present, so you don't
-need a bunch of zero flows for the components not present. The system component/stream list is a Dict,
-indexed on the component names, which is fairly flexible, but I wrapped it in a struct to add validation
-checks. You can't add a stream to the list that uses a different component list than the rest.
-
-I figured we don't need to squeeze every last nanosecond out of the speed in this specific area, so the
-Dict is probably fast enough and very user-friendly.
+I am sure that I'll keep on tinkering with this for some time still. At the very least to add more
+reconciliation algorithsm, and maybe a few more unit operations. I am VERY open to ideas and collaborators.
