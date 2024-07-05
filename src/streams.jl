@@ -63,7 +63,7 @@ function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
     length(timestamps) != numdata && throw(DimensionMismatch("length mismatch between data and timestamps."))
     
     # Build the TimeArrays
-    allcomps = names(complist) # Also those not present in the stream
+    allcomps = members(complist) # Also those not present in the stream
     massflows = zeros(numdata, length(allcomps))
     moleflows = zeros(numdata, length(allcomps))
 
@@ -488,7 +488,7 @@ Returns a new Stream object with the same information as the specificied stream,
 
 """
 function renamestream(stream, newname)
-    comps = names(stream.comps)
+    comps = members(stream.comps)
     timestamps = timestamp(stream.massflows)
     flowdata = values(stream.massflows)
 
@@ -545,7 +545,7 @@ end
 
 """
 
-function readstreamhistory!(fs, streamname, filename; ismoleflow=false)
+     readstreamhistory!(fs, streamname, filename; ismoleflow=false)
 
 Reads in a stream history file (CSV file) into the stream in fs.streams.
 

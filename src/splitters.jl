@@ -6,10 +6,20 @@
 
 
 """
+
     flowsplitter!(fs, outlets::Vector{String}, inlets::Vector{String}, params)
 
 Calculation for flowsplitter UnitOps. Splits combined feed stream according to params - an iterable with 
 split fractions to (n - 1) streams. The last stream gets the balance.
+
+Example:
+
+    @unitop begin
+        inlets --> ["Product"]
+        outlets --> ["Product1", "Product2"]
+        calc --> flowsplitter!
+        params --> [0.5]
+    end "ProductSplitter" fs
 
 """
 function flowsplitter!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
@@ -39,14 +49,20 @@ end
     
     componentplitter!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)
 
-Calculation for componentplitter UnitOps. Splits combined feed stream according to params - a nested Dict with 
+Calculation for component splitter UnitOps. Splits combined feed stream according to params - a nested Dict with 
 split fractions for each component to (n - 1) streams. The last stream gets the balance.
 
 Example:
-    params = Dict([
-    "Hydrogen" => Dict(["Product1" => 0.5]),
-    "Ethylene" => Dict(["Product2" => 0.3])
+
+    @unitop begin
+    inlets --> ["Product1"]
+    outlets --> ["Product1a", "Product1b"]
+    calc --> componentplitter!
+    params --> Dict([
+        "Hydrogen" => Dict(["Product1a" => 0.5]),
+        "Ethane" => Dict(["Product1b" => 0.3])
     ])
+    end "ComponentSplitter" fs
 
 """
 function componentplitter!(streamlist::StreamList, outlets::Vector{String}, inlets::Vector{String}, params)

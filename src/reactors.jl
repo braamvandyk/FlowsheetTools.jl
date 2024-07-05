@@ -30,9 +30,11 @@ end
 
 
 """
-    function Reaction(reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion)
+
+    Reaction(reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion)
 
 Constructor for Reaction object. Calculates the index of the target reactant in the reactants vector and stores it for efficiency in downstream calculations.
+    
 """
 function Reaction(fs, reactants, products, reactcoeffs, prodcoeffs, targetcomp, targetconversion)
     targetindex = findfirst(isequal(targetcomp), reactants)

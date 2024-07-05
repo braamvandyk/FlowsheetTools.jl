@@ -1,14 +1,21 @@
 #----KPIs--------------------
 
-# KPIs are now defined as functions that take a BalanceBoundary as input.
+# KPIs are defined as functions that take a BalanceBoundary as input.
 # All mass / mole / atom flows in and out are in the BalanceBoundary, 
 # with mass and elemental closures already calculated.
 
 
 """
+
     conversion(b::BalanceBoundary, component::String)
 
-Calculate the fractional conversion of the component over the balance boundary
+Calculate the fractional conversion of the component over the balance boundary.
+Results are returned for each timestamp in the streams.
+
+Example
+
+    conversion(fs.boundaries["B1"], "Ethane")
+
 """
 function conversion(b::BalanceBoundary, component::String)
     # Find the component in the feed
@@ -45,9 +52,16 @@ end
 
 
 """
-    function molar_selectivity(b, reactant, product)
+
+    molar_selectivity(b, reactant, product)
 
 Calculate the molar selectivity of the converted reactant to the product, over the balance boundary (b).
+Since the calculation does not know about actual reactions, it calculates Δproduct / Δreactant.
+Results are returned for each timestamp in the streams.
+
+Example
+    molar_selectivity(fs.boundaries["B1"], "Ethylene", "Ethane")
+
 """
 function molar_selectivity(b::BalanceBoundary, reactant::String, product::String)
     # Find the reactant inflow

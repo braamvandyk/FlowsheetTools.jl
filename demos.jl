@@ -387,6 +387,14 @@ fs.rununits
 #-
 fs([3, 1, 2, 4, 5])
 
+# Or permanently change the order:
+
+
+fs.runorder
+#-
+setorder!(fs, [5, 4, 3, 2, 1])
+fs.runorder
+
 # Keep in mind that YOU need to ensure that the order of execution makes sense. `FlowsheetTools.jl` is not a process simulator. It will not converge recycles etc.
 
 # Defining a flowsheet with a lot of streams and unitoperations can be confusing. To help you keep track of everything, you can generate a block flow diagram of your flowsheet:

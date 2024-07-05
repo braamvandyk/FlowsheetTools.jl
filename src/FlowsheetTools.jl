@@ -1,3 +1,11 @@
+"""
+
+## FlowsheetTools
+
+A basic flowsheeting solution for Julia to allow mass balance closure, as well as KPI evaluations on specified flowsheets mass balance boundaries.
+
+"""
+
 module FlowsheetTools
 
 export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, deletecomponent!, deletecomponents!,
@@ -8,7 +16,8 @@ export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, del
         BalanceBoundary, BoundaryList, @boundary, showdata, deleteboundary!, deleteboundaries!,
         calccorrections, calccorrections_anchor, closemb!,
         conversion, molar_selectivity,
-        Flowsheet, addunitop!, setorder!, generateBFD, componentnames
+        Flowsheet, addunitop!, setorder!, generateBFD, componentnames,
+        members
 
 
 using ArgCheck,                 # Replace simple @asserts with ArgCheck
@@ -63,12 +72,30 @@ include("flowsheets.jl")
 
 """
 
-    function names(a)
+    function members(a)
 
-Returns the names of the components in the `ComponentList`, `StreamList` or `BoundaryList`.
+Returns the names of the components. streams or mass balance boundaries in the `ComponentList`, `StreamList` or `BoundaryList`.
+
+julia> members(fs.comps)
+5-element Vector{String}:
+ "Ethylene"
+ "Ethane"
+ "Hydrogen"
+ "Nitrogen"
+ "Argon"
+
+julia> members(fs.streams)
+11-element Vector{String}:
+ "C2"
+ "H2"
+ "Product"
+ ⋮
+ "Product3"
+ "Product4"
+ "Dummy"
 
 """
-function names(a)
+function members(a)
     return collect(keys(a.list))
 end
 

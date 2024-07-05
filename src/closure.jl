@@ -6,14 +6,21 @@
 
 
 """
-function calccorrections(fs, customerror=nothing; totalweight=1.0, elementweight = 1.0, 
-        setelements = false, elementweights::Dict{String, Float64}= Dict{String, Float64}, λ = 0.1)
 
-Basic mass balance reconciliation. Error in total mass closure and average element closures are
+    calccorrections(fs; customerror=nothing, anchor = nothing, totalweight=1.0, elementweight = 1.0, 
+        setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}(), λ = 0.1)
+
+Basic mass balance reconciliation. Error in total mass closure and overall element closures are
 weighted by *totalweight* and *elementweight* respectively and the squared weighted error is minimized.
 If *setelements* is true, the dictionary of weights for each element is applied, rather than value of *elementweights*.
 
-Results are returned as a dict of streams and corrections to their flows.
+One stream can be specified as an anchor stream, that will not be modified during reconciliation - correction factor of 1.0.
+This stream is identified by supplying it's name in the kwarg `anchor`.
+
+Regularisation, as per ridge regression is done with a weight, λ = 0.1 by default.
+
+Results are returned as a dict of stream names and the correction factors for their flows.
+
 """
 function calccorrections(fs; customerror=nothing, anchor = nothing, totalweight=1.0, elementweight = 1.0, 
     setelements = false, elementweights::Dict{String, Float64} = Dict{String, Float64}(), λ = 0.1)
@@ -147,13 +154,12 @@ end
 
 
 """
-    function closemb!(fs; corrections::Dict{String, Float64})
 
-Apply the mass balance reconciliation. The corrections can first calculated using `calccorrections`
-and can then be applied to multiple boundaries using this function. If no corrections are passed,
-`calccorrections` is automatically called.
+    closemb!(fs; corrections::Dict{String, Float64})
 
-Since balance boundaries are immutable, a new boundary instance is returned.
+Apply the mass balance reconciliation correction factors. The corrections can first calculated using
+`calccorrections` and can then be applied to multiple boundaries using this function. 
+
 """
 function closemb!(fs, corrections::Dict{String, Float64})
     # Apply the stream corrections

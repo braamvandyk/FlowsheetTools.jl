@@ -55,15 +55,18 @@ end
 
 
 """
+
     BalanceBoundary(name, unitops, included_units)
 
-Constructor for a BalanceBoundary. Inputs are a UnitOpList and and array of names of `UnitOp`s in the list
-that are inside the boundary. Inlet and outlet streams crossing the boundary are automatically calculated.
+Constructor for a BalanceBoundary. Inputs are a name::String, a UnitOpList container and and array of names of
+`UnitOp`s in the list - `included_units` - that are inside the boundary. Inlet and outlet streams crossing the
+boundary are automatically calculated.
 
-Will error if there are either no inlets or outlets.
+Will error if there are either no inlets or no outlets.
 
 Since not all atoms referenced in the streams will be present, closures for atoms not present will be indicated by
-setting the values to -1.0
+setting the values to 0.0.
+
 """
 function BalanceBoundary(name, unitops, included_units)
     # Get the streams that cross the boundary
@@ -110,9 +113,12 @@ end
 
 
 """
+
     Boundarylist()
 
-Constructor for an empty boundary list. Boundaries are added when created via the @boundary macro
+Constructor for an empty boundary list. Boundaries are added when created via the @boundary macro.
+The BoundaryList is held inside a `Flowsheet`, rather than created separately.
+
 """
 function BoundaryList()
     l = OrderedDict{String, Stream}()
@@ -217,15 +223,9 @@ end
         unitops --> ["Reactor", "Membrane"]
     end "B1" fs
 
-Create a boundary, that includes UnitOps "Reactor" amd "Membrane" from the UnitOpsList sysunitops and add it to BoundaryList sysboundaries.
-Store it in fs.boundaries["B1"]
-
-    @boundaryhist begin
-        unitops --> ["RX101"]
-    end "B2" fs
-
-Create a boundary, that includes UnitOps "RX101" from the UnitOpsList sysunitops and add it to BoundaryList sysboundaries.
-Store it in fs.boundaries["B2"]
+Create a boundary, that includes UnitOps "Reactor" amd "Membrane" for the Flowsheet fs.
+The internal UnitOpsList is fs.unitops and the internal BoundaryList is fs.boundaries.
+The constructed boundary will be available as fs.boundaries["B1"].
 
 """
 macro boundary(ex::Expr, name::String, fs::Symbol)      
@@ -252,12 +252,14 @@ end
 
 
 """
+
     showdata(b::BalanceBoundary)
 
 Returns a data table for a BalanceBoundary, as a String.
 
 Example:
-    print(showdata(b))
+    print(showdata(fs.boundaries["B1"]))
+
 """
 function showdata(b::BalanceBoundary)
     invals = pretty_table(String, b.total_in.massflows)
@@ -270,9 +272,13 @@ end
 
 
 """
+
     inlets, outlets, internals = boundarystreams(units, included_units)
 
 Find the streams that enter and leave the boundary that includes the specified unitops.
+    units::UnitOpList
+    included_units::Array["String"]
+
 """
 function boundarystreams(unitops, included_units)
     #Figure out which streams cross the boundary:
@@ -327,7 +333,7 @@ end
 
 """
 
-    function deleteboundary!(fs, name)
+    deleteboundary!(fs, name)
 
 Delete the specified bounary from the Flowsheet's BoundaryList.
 
