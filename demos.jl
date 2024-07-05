@@ -391,7 +391,7 @@ fs([3, 1, 2, 4, 5])
 
 # Defining a flowsheet with a lot of streams and unitoperations can be confusing. To help you keep track of everything, you can generate a block flow diagram of your flowsheet:
 
-generateBFD(fs, "./myflowsheet.svg")
+generateBFD(fs, "./myflowsheet.png") # Or .svg
 
 
 # ## Mass balance boundaries
@@ -642,7 +642,7 @@ fs.unitops["Reactor2"]()
 
 # We can do a quick check on our flowsheet:
 
-generateBFD(fs, "./myflowsheet2.svg")
+generateBFD(fs, "./myflowsheet2.png") # Or .svg
 
 # Now let's introduce a measurement error in the 'Mixed' stream:
 
