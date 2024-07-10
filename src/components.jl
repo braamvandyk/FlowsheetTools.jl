@@ -24,10 +24,13 @@ end
 
 
 """
+
     Component(name, atoms, counts)
 
 Constructor for molecular species that defines the atomic make-up.
-It is recommended to rather use the @comp macro to create components interactively
+It is recommended to rather use the @comp macro to create components interactively.
+The atoms are identified by their IUPAC symbols, as a `String`. Counts are integers.
+
 """
 function Component(name, atoms, counts)
     Mr = 0.0
@@ -39,9 +42,11 @@ end
 
 
 """
+
     ComponentList()
 
-Constructor for an empty component list. Components are added when created via the @comp macro
+Constructor for an empty component list. Components are added when created via the @comp macro.
+
 """
 function ComponentList()
     l = OrderedDict{String, Component}()
@@ -112,12 +117,14 @@ end
 
 
 """
+
     @comp begin
         C --> 2
         H --> 6
     end "Ethane" fs
 
-Defines a Component with the specified name and atomic composition and add it to fs.comps, a ComponentList
+Defines a Component with the specified name and atomic composition and add it to fs.comps, a ComponentList, inside fs::Flowsheet.
+
 """
 macro comp(ex::Expr, name::String, fs::Symbol)      
     local atoms = String[]
@@ -152,9 +159,11 @@ end
 
 
 """
-    function writecomp(filename, comp)
+
+    writecomponent(filename, comp)
 
 Write a Component struct to a file.
+
 """
 function writecomponent(filename, comp)
     str = "$(comp.name)\n"
@@ -175,11 +184,13 @@ end
 
 
 """
+
 *Internal use only!* Use readcomponentlist!() instead.
 
     function readcomp(filename)
 
-Read a Component struct from a file.
+Read a Component struct from a file. This file is created using `writecomponent()` for a Component object, created via @comp.
+
 """
 function readcomponent(filename)
     f = open(filename, "r")
@@ -206,11 +217,13 @@ end
 
 
 """
+
     function readcomponentlist!(fs, foldername, filenames)
 
 Read a list of components into a ComponentList, fs.comps.
 The folder is specified and `filenames` contains a list of filenames without extentions.
-The component files are text files, created with `writecomp()`
+The component files are text files, created with `writecomponent()` for a Component object, created via @comp.
+
 """
 function readcomponentlist!(fs, foldername, filenames)
     @argcheck fs isa Flowsheet "fs must be a Flowsheet"
@@ -236,7 +249,10 @@ end
 
     function deletecomponent!(fs, name)
 
-Delete a component from the Flowsheet's ComponentList.
+Delete a component from fs::Flowsheet's ComponentList. Identified via name::String.
+This will result in all streams and mass balance boundaries also being deleted, as 
+these all refer to all components.
+
 """
 function deletecomponent!(fs, name)
     @argcheck fs isa Flowsheet "fs must be a Flowsheet"
@@ -251,9 +267,11 @@ end
 
 """
 
-function deletecomponents!(fs)
+    function deletecomponents!(fs)
 
 Delete all components from the Flowsheet's ComponentList.
+This will result in all streams and mass balance boundaries also being deleted, as 
+these all refer to all components.
 
 """
 function deletecomponents!(fs)

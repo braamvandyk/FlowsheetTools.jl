@@ -99,11 +99,14 @@ end
 
 
 """
+*Internal use*
+
     addtorun!(fs::Flowsheet, u::String)
 
 
 Add a single unit operation, or an array of unit operations to the execution list of a Flowsheet object.
 Default execution order is set as the order in which the unit operations are added.
+
 """
 function addtorun!(fs::Flowsheet, u::String)
     # Only add if it is not already there.
@@ -119,11 +122,14 @@ function addtorun!(fs::Flowsheet, u::String)
     return nothing
 end
 
-"""
-    removeunitop!(fs::Flowsheet, u::String)
-    removeunitop!(fs::Flowsheet, ::Vector{String})
 
-Removed the specified unit operation(s) from the Flowsheet object, as well as from its execution order.
+"""
+
+    removeunitop!(fs::Flowsheet, u::String)
+    removeunitop!(fs::Flowsheet, us::Vector{String})
+
+Remove the specified unit operation(s) from the Flowsheet object.
+
 """
 function removeunitop!(fs::Flowsheet, u::String)
     index = findfirst(x -> x == u, fs.unitops)
@@ -144,7 +150,7 @@ function removeunitop!(fs::Flowsheet, u::String)
 end
 
 
-function removeunitop!(fs::Flowsheet, ::Vector{String})
+function removeunitop!(fs::Flowsheet, us::Vector{String})
     for u in us
         index = findfirst(x -> x == u, fs.unitops)
         #  Ignore if not there
@@ -166,32 +172,22 @@ end
 
 
 """
+
     setorder!(fs::Flowsheet, neworder)
 
 Change the execution order of the unit operations in a Flowsheet object.
 The lenght of the execution order array does not have to match the number of units. Indicidual units can be executed multiple times, or not at all.
+
 """
 function setorder!(fs::Flowsheet, neworder)
-    numold = length(fs.execution_order)
+    numold = length(fs.runorder)
     numnew = length(neworder)
+
+    @argcheck numnew == length(fs.unitops) "different number of items in execution order ($numnew) than unit operations in the flowsheet $fs ($numold)"
 
     if numold == numnew
         for i in 1:numold
-            fs.execution_order[i] = neworder[i]
-        end
-    elseif numold < numnew
-        for i in 1:numold
-            fs.execution_order[i] = neworder[i]
-        end            
-        for j = 1:(numnew - numold)
-            push!(fs.execution_order, neworder[numold+j])
-        end
-    else
-        for i in 1:numold
-            fs.execution_order[i] = neworder[i]
-        end            
-        for j = 1:(numold - numnew)
-            pop!(fs.execution_order)
+            fs.runorder[i] = neworder[i]
         end
     end
 
@@ -200,6 +196,7 @@ end
 
 
 """
+
     generateBFD(fs::Flowsheet, filename = nothing; displaybfd=true)
 
 Generate a block flow diagram of the flowsheet (using Mermaid.js).
@@ -208,6 +205,7 @@ The file type can be either `.svg` or `.png`. Specifying other extensions to the
 If no filename is specified, the file will be an SVG image.
 
 if `displaybfd` is true, the diagram will also be displayed in the default manner for the environment, using `display()`.
+    
 """
 function generateBFD(fs::Flowsheet, filename = nothing; displaybfd=true)
 #=
@@ -353,20 +351,3 @@ function generateBFD(fs::Flowsheet, filename = nothing; displaybfd=true)
     return filename
 end
 
-
-
-"""
-
-    componentnames(fs)
-
-Return the list of names of components in the included `ComponentList` in the `Flowsheet`, fs.
-
-# Examples
-```julia
-julia> componentnames(fs)
-```
-
-"""
-function componentnames(fs)
-    return collect(keys(fs.comps.list))
-end

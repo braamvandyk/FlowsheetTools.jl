@@ -387,11 +387,19 @@ fs.rununits
 #-
 fs([3, 1, 2, 4, 5])
 
+# Or permanently change the order:
+
+
+fs.runorder
+#-
+setorder!(fs, [5, 4, 3, 2, 1])
+fs.runorder
+
 # Keep in mind that YOU need to ensure that the order of execution makes sense. `FlowsheetTools.jl` is not a process simulator. It will not converge recycles etc.
 
 # Defining a flowsheet with a lot of streams and unitoperations can be confusing. To help you keep track of everything, you can generate a block flow diagram of your flowsheet:
 
-generateBFD(fs, "./myflowsheet.svg")
+generateBFD(fs, "./myflowsheet.png") # Or .svg
 
 
 # ## Mass balance boundaries
@@ -642,7 +650,7 @@ fs.unitops["Reactor2"]()
 
 # We can do a quick check on our flowsheet:
 
-generateBFD(fs, "./myflowsheet2.svg")
+generateBFD(fs, "./myflowsheet2.png") # Or .svg
 
 # Now let's introduce a measurement error in the 'Mixed' stream:
 
@@ -680,10 +688,10 @@ corrections = calccorrections(fs; λ = 0.0, anchor = "H2");
 # - elementweight: the weight applied to each element balance error. Each element error gets the same weight with a default value of 1.0.
 # - setelements: if true, the dictionary of weights for each element is applied, rather than value of *elementweights*. This dictionary is passed in `elementweights`.
 # - elementweights: (note the plural!) a dictionary of element => weight. Default value is an empty dictionary. This allows each element closure error to be weighted separately and some elements errors to be ignored, by setting these weights to 0.0.
-# - λ: the regularisation parameter for (Ridge Regression)[https://en.wikipedia.org/wiki/Ridge_regression]. Default value is 0.1.
+# - λ: the regularisation parameter for (L₂ Regularisation)[https://en.wikipedia.org/wiki/Ridge_regression#Tikhonov_regularization]. Default value is 0.1.
 
-# Ridge regression adds the sum of the squared corrections to the error that is to be minimised, weighted by λ. This means that the solver strives to minimise the adjustments to the flows while reconciling the mass balance.
-# Regularisation is a trade-off. Use it when you see suspiciouly large corrections. If used when not needed, it will give worse reconciliations.
+# The regularisation adds the sum of the squared corrections to the error that is to be minimised, weighted by λ. This means that the solver strives to minimise the adjustments to the flows while reconciling the mass balance.
+# Regularisation is a trade-off. Use it when you see suspiciouly large corrections. If used when not needed, it will may worse reconciliations.
 
 corrections
 
@@ -693,7 +701,7 @@ corrections
 # Let's first look at that custom error function in a bit more detail.
 # This function takes the form:
 
-myerr(dict) = 0.01 * (1.0 - sum(abs2, (values(dict)))) # Fudging the Ridge Regressino, with a lambda of 0.01. Gives not-so-great results!.
+myerr(dict) = 0.01 * sum(abs2, 1.0 .- (values(dict))) # Fudging the Ridge Regression, with a lambda of 0.01.
 
 # where the dict is a dictionary of stream => correction factor pairs. These corrections are the values at each step in the optimisation and the custom error function must multiply the stream flows with them before doing any additional calculations.
 # This is needed, since we won't know what the final resuls of the corrections will be, and hence cannot apply the factors to the streams before the end.
