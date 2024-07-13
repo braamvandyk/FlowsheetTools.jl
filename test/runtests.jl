@@ -3,7 +3,7 @@ using Test
 
 @testset "Streams" begin
     fs = Flowsheet()
-    count = readcomponentlist!(fs, @__DIR__, "components", ["Ethylene", "Ethane", "Hydrogen"])
+    count = readcomponentlist!(fs, joinpath(@__DIR__, "components"), ["Ethylene", "Ethane", "Hydrogen"])
     @test count == 3
     @test fs.comps["Ethylene"].Mr ≈ 28.053
     
@@ -112,7 +112,7 @@ end
 @testset "Corrections and Closure" begin
     fs = Flowsheet()
 
-    count = readcomponentlist!(fs, @__DIR__, "components", ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"])
+    count = readcomponentlist!(fs, joinpath(@__DIR__, "components"), ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"])
     @test count ==5
 
     readstreamhistory!(fs, "C2", joinpath(@__DIR__, "streamhistories", "C2.csv"); ismoleflow=true)
