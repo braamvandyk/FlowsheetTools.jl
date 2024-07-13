@@ -1,11 +1,11 @@
 fs = Flowsheet();
 
-count = readcomponentlist!(fs, relpath("../../components", @__DIR__), ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"]);
+count = readcomponentlist!(fs, @__DIR__, ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"]);
 
 
-readstreamhistory!(fs, "C2", joinpath(relpath("../../streamhistories", @__DIR__), "C2.csv"); ismoleflow=true);
-readstreamhistory!(fs, "H2", joinpath(relpath("../../streamhistories", @__DIR__), "Hydrogen.csv"); ismoleflow=true);
-readstreamhistory!(fs, "Product", joinpath(relpath("../../streamhistories", @__DIR__), "Product.csv"); ismoleflow=true);
+readstreamhistory!(fs, "C2", joinpath(@__DIR__, "C2.csv"); ismoleflow=true);
+readstreamhistory!(fs, "H2", joinpath(@__DIR__, "Hydrogen.csv"); ismoleflow=true);
+readstreamhistory!(fs, "Product", joinpath(@__DIR__, "Product.csv"); ismoleflow=true);
 addemptystream!(fs, "Mixed");
 addemptystream!(fs, "Product1");
 addemptystream!(fs, "Product1a");
