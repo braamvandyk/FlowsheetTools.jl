@@ -3,6 +3,27 @@ using Test
 
 @testset "Streams" begin
     fs = Flowsheet()
+
+    @comp begin
+        "C" --> 2
+        "H" --> 4
+    end "Ethylene" fs
+    dummy = writecomponent(joinpath(@__DIR__, "components", "Ethylene.comp"), fs.comps["Ethylene"])
+    @test dummy == 25
+
+    @comp begin
+        "C" --> 2
+        "H" --> 6
+    end "Ethane" fs
+    dummy = writecomponent(joinpath(@__DIR__, "components", "Ethane.comp"), fs.comps["Ethane"])
+    @test dummy == 24
+
+    @comp begin
+        "H" --> 2
+    end "Hydrogen" fs
+    dummy = writecomponent(joinpath(@__DIR__, "components", "Hydrogen.comp"), fs.comps["Hydrogen"])
+    @test dummy == 21
+
     count = readcomponentlist!(fs, joinpath(@__DIR__, "components"), ["Ethylene", "Ethane", "Hydrogen"])
     @test count == 3
     @test fs.comps["Ethylene"].Mr ≈ 28.053

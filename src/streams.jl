@@ -569,7 +569,7 @@ name of the component.
 """
 function readstreamhistory!(fs, streamname, filename; ismoleflow=false)
 
-    data, header = readdlm(filename, ',', '\n', header=true)
+    data, header = readdlm(lowercase(filename), ',', '\n', header=true)
     comps = string.(header[2:end]) # readdlm returns an array of AbstractStrings for some reason
     flows = data[:, 2:end]
     timestamps = DateTime.(data[:, 1], "yyyy/mm/dd HH:MM")
@@ -590,9 +590,9 @@ Writes in a stream history file (CSV file).
 """
 function writestreamhistory(stream, filename, moleflow=false)
     if moleflow
-        writetimearray(stream.moleflows, filename, format="yyyy/mm/dd HH:MM", delim=',')
+        writetimearray(stream.moleflows, lowercase(filename), format="yyyy/mm/dd HH:MM", delim=',')
     else
-        writetimearray(stream.massflows, filename, format="yyyy/mm/dd HH:MM", delim=',')
+        writetimearray(stream.massflows, lowercase(filename), format="yyyy/mm/dd HH:MM", delim=',')
     end
 
     return nothing
