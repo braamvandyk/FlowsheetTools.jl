@@ -40,7 +40,7 @@ using ArgCheck,                 # Replace simple @asserts with ArgCheck
       Statistics,               # Basic statistical functions
       TimeSeries                # Used for TimeArray in Streams
 
-
+using PrecompileTools: @setup_workload, @compile_workload 
 
 import Base.setindex!
 import Base.getindex
@@ -99,10 +99,10 @@ function members(a)
     return collect(keys(a.list))
 end
 
-# @setup_workload begin
-#       @compile_workload begin
-#             include("./precompile./workload.jl")
-#       end
-# end
+@setup_workload begin
+      @compile_workload begin
+            include("./precompile./workload.jl")
+      end
+end
 
 end

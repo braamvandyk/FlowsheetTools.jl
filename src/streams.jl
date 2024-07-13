@@ -119,8 +119,9 @@ function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
         atomflows[datum] = _atomflows
     end
 
-    massflows_ta = TimeArray(timestamps, massflows, allcomps)
-    moleflows_ta = TimeArray(timestamps, moleflows, allcomps)
+    s_allcomps = Symbol.(allcomps)
+    massflows_ta = TimeArray(timestamps, massflows, s_allcomps)
+    moleflows_ta = TimeArray(timestamps, moleflows, s_allcomps)
     totalmassflows_ta = TimeArray(timestamps, totalmassflows, [:totalmassflows])
     atomflows_ta = TimeArray(timestamps, atomflows, [:atomflows])
     if length(totalmassflows) > 1
@@ -589,9 +590,9 @@ Writes in a stream history file (CSV file).
 """
 function writestreamhistory(stream, filename, moleflow=false)
     if moleflow
-        writetimearray(stream.moleflows, filename, format="dd/mm/yyyy HH:MM", delim=',')
+        writetimearray(stream.moleflows, filename, format="yyyy/mm/dd HH:MM", delim=',')
     else
-        writetimearray(stream.massflows, filename, format="dd/mm/yyyy HH:MM", delim=',')
+        writetimearray(stream.massflows, filename, format="yyyy/mm/dd HH:MM", delim=',')
     end
 
     return nothing

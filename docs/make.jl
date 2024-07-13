@@ -6,11 +6,12 @@ DocMeta.setdocmeta!(FlowsheetTools, :DocTestSetup, :(using FlowsheetTools); recu
 makedocs(;
     modules=[FlowsheetTools],
     authors="Braam van Dyk <braam.vandyk@gmail.com> and contributors",
-    repo="https://github.com/UserName/FlowsheetTools.jl/blob/{commit}{path}#{line}",
+    repo="https://github.com/braamvandyk/FlowsheetTools.jl/blob/{commit}{path}#{line}",
     sitename="FlowsheetTools.jl",
     format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://UserName.github.io/FlowsheetTools.jl",
+        # prettyurls=get(ENV, "CI", "false") == "true",
+        prettyurls=true,
+        canonical="https://braamvandyk.github.io/FlowsheetTools.jl",
         edit_link="main",
         assets=String[],
     ),

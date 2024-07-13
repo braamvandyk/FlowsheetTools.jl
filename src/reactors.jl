@@ -116,16 +116,16 @@ function stoichiometric_reactor!(streamlist::StreamList, outlets::Vector{String}
         for (i, reactant) in enumerate(reaction.reactants)
             # Remember that moleflows is a TimeArray, so access the values via values()
             if reactant in keys(delta_moleflows)
-                delta_moleflows[reactant] .-= values(moleflows[targetcomp]) .* targetconversion .* reaction.reactcoeffs[i] ./ targetcoeff
+                delta_moleflows[reactant] .-= values(moleflows[Symbol(targetcomp)]) .* targetconversion .* reaction.reactcoeffs[i] ./ targetcoeff
             else
-                delta_moleflows[reactant] = -1.0 .* values(moleflows[targetcomp]) .* targetconversion .* reaction.reactcoeffs[i] ./ targetcoeff
+                delta_moleflows[reactant] = -1.0 .* values(moleflows[Symbol(targetcomp)]) .* targetconversion .* reaction.reactcoeffs[i] ./ targetcoeff
             end
         end
         for (i, product) in enumerate(reaction.products)
             if product in keys(delta_moleflows)
-                delta_moleflows[product] .+= values(moleflows[targetcomp]) .* targetconversion .* reaction.prodcoeffs[i] ./ targetcoeff
+                delta_moleflows[product] .+= values(moleflows[Symbol(targetcomp)]) .* targetconversion .* reaction.prodcoeffs[i] ./ targetcoeff
             else
-                delta_moleflows[product] = values(moleflows[targetcomp]) .* targetconversion .* reaction.prodcoeffs[i] ./ targetcoeff
+                delta_moleflows[product] = values(moleflows[Symbol(targetcomp)]) .* targetconversion .* reaction.prodcoeffs[i] ./ targetcoeff
             end
         end
     end
@@ -138,7 +138,7 @@ function stoichiometric_reactor!(streamlist::StreamList, outlets::Vector{String}
     # Add the values in delta_moleflows to the values in moleflows and create an output stream
     for component in keys(delta_moleflows)
         idx = findfirst(isequal(component), comps)
-        vals[:,idx] = values(moleflows[component]) + delta_moleflows[component]
+        vals[:,idx] = values(moleflows[Symbol(component)]) + delta_moleflows[component]
     end
     
     # Replace outlet stream in streamlist. Set ismoleflow to true.

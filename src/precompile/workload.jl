@@ -1,100 +1,40 @@
-syscomps = ComponentList()
+fs = Flowsheet();
 
-count = readcomponentlist!(syscomps, "components", ["Ethylene", "Ethane", "Hydrogen"])
+count = readcomponentlist!(fs, "components", ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"]);
 
-@comp begin
-    N --> 2
-end "Nitrogen" syscomps
 
-writecomponent(joinpath("components/", "Nitrogen.comp"), syscomps["Nitrogen"])
+readstreamhistory!(fs, "C2", joinpath("streamhistories", "C2.csv"); ismoleflow=true);
+readstreamhistory!(fs, "H2", joinpath("streamhistories", "Hydrogen.csv"); ismoleflow=true);
+readstreamhistory!(fs, "Product", joinpath("streamhistories", "Product.csv"); ismoleflow=true);
+addemptystream!(fs, "Mixed");
+addemptystream!(fs, "Product1");
+addemptystream!(fs, "Product1a");
+addemptystream!(fs, "Product1b");
+addemptystream!(fs, "Product2");
+addemptystream!(fs, "Product3");
+addemptystream!(fs, "Product4");
 
-sysstreams = StreamList()
-
-@stream mass begin
-    "Ethylene" --> 2.8053
-    "Ethane" --> 27.06192
-    "Hydrogen" --> 2.21738
-end "Test" syscomps sysstreams
-
-@stream mole begin
-    "Ethane" --> 0.9
-    "Hydrogen" --> 1.1
-    "Ethylene" --> 0.1
-end "Product" syscomps sysstreams
-
-sysstreams["Test"].moleflows .≈ sysstreams["Product"].moleflows
-sysstreams["Test"] ≈ sysstreams["Product"]
-sysstreams["Test"] == sysstreams["Product"]
-
-all(getindex.(values(sysstreams["Test"].atomflows), "C") .== getindex.(values(sysstreams["Product"].atomflows), "C"))
-
-sysstreams = StreamList()
-
-sysstreams["Feed"] = readstreamhistory(joinpath("streamhistories", "FeedStream.csv"), "Feed", syscomps; ismoleflow=true)
-sysstreams["Product"] = readstreamhistory(joinpath("streamhistories", "ProdStream.csv"), "Product", syscomps; ismoleflow=true)
-
-@comp begin
-    Ar --> 1
-end "Argon" syscomps
-
-refreshcomplist(sysstreams)
-
-sysstreams["Prod2"] = 2.0*sysstreams["Product"]
-sysstreams["Prod2"] == 2.0*sysstreams["Product"]
-
-copystream!(sysstreams, "Product", "MyStream")
-copystream!(sysstreams, "Product", "MyStream2"; factor=2.0)
-renamestream!(sysstreams, "MyStream", "Dummy")
-deletestream!(sysstreams, "Dummy")
-
-sysstreams = StreamList()
-
-@stream mole begin
-    "Hydrogen" --> 1.1
-end "H2" syscomps sysstreams
-
-@stream mole begin
-    "Ethylene" --> 0.1
-    "Ethane" --> 0.9
-end "C2" syscomps sysstreams
-
-sysstreams["Mixed"] = emptystream(sysstreams, "Mixed")
-
-@stream mole begin
-    "Ethylene" --> 0.0
-    "Ethane" --> 1.0
-    "Hydrogen" --> 1.0
-end "Product" syscomps sysstreams
-
-sysunitops = UnitOpList()
+addfixedstream!(fs, "Dummy", [10.0, 0.0, 0.0, 0.0, 0.1]);
 
 @unitop begin
     inlets --> ["H2", "C2"]
     outlets --> ["Mixed"]
     calc --> mixer!
-end "Mixer" sysstreams sysunitops
-
-sysunitops["Mixer"]()
+end "Mixer" fs;
+fs.unitops["Mixer"]();
 
 @unitop begin
     inlets --> ["Mixed"]
     outlets --> ["Product"]
-end "Reactor" sysstreams sysunitops
-
-sysstreams["Product1"] = emptystream(sysstreams, "Product1");
-sysstreams["Product1a"] = emptystream(sysstreams, "Product1a");
-sysstreams["Product1b"] = emptystream(sysstreams, "Product1b");
-sysstreams["Product2"] = emptystream(sysstreams, "Product2");
-sysstreams["Product3"] = emptystream(sysstreams, "Product3");
+end "Reactor" fs;
 
 @unitop begin
     inlets --> ["Product"]
     outlets --> ["Product1", "Product2"]
     calc --> flowsplitter!
     params --> [0.5]
-end "ProductSplitter" sysstreams sysunitops
-
-sysunitops["ProductSplitter"]()
+end "ProductSplitter" fs;
+fs.unitops["ProductSplitter"]();
 
 @unitop begin
     inlets --> ["Product1"]
@@ -104,127 +44,48 @@ sysunitops["ProductSplitter"]()
         "Hydrogen" => Dict(["Product1a" => 0.5]),
         "Ethane" => Dict(["Product1b" => 0.3])
     ])
-end "ComponentSplitter" sysstreams sysunitops
-
-sysunitops["ComponentSplitter"]()
-
-@unitop begin
-    inlets --> ["Product1a", "Product1b", "Product2"]
-    outlets --> ["Product3"]
-    calc --> mixer!
-end "Mixer2" sysstreams sysunitops
-
-sysunitops["Mixer2"]()
-
-sysstreams["Product"] ≈ sysstreams["Product3"]
-
-@boundary begin
-    unitops --> ["Mixer", "Reactor"]
-end b sysunitops
-
-b.atomclosures;
-b.closure;
-b.total_in.totalmassflow;
-b.total_out.totalmassflow;
-
-conversion(b, "Ethane");
-molar_selectivity(b, "Ethylene", "Ethane")
-
-sysstreams = StreamList() # Create a new container and dump the previous streams
-sysstreams["C2"] = readstreamhistory(joinpath("streamhistories", "C2.csv"), "C2", syscomps; ismoleflow=true)
-sysstreams["H2"] = readstreamhistory(joinpath("streamhistories", "Hydrogen.csv"), "H2", syscomps; ismoleflow=true)
-sysstreams["Product"] = readstreamhistory(joinpath("streamhistories", "Product.csv"), "Product", syscomps; ismoleflow=true)
-sysstreams["Mixed"] = emptystream(sysstreams, "Mixed");
-sysstreams["Product1"] = emptystream(sysstreams, "Product1");
-sysstreams["Product1a"] = emptystream(sysstreams, "Product1a");
-sysstreams["Product1b"] = emptystream(sysstreams, "Product1b");
-sysstreams["Product2"] = emptystream(sysstreams, "Product2");
-sysstreams["Product3"] = emptystream(sysstreams, "Product3");
-
-sysunitops = UnitOpList()
-
-@unitop begin
-    inlets --> ["H2", "C2"]
-    outlets --> ["Mixed"]
-    calc --> mixer!
-end "Mixer" sysstreams sysunitops
-sysunitops["Mixer"]()
-
-@unitop begin
-    inlets --> ["Mixed"]
-    outlets --> ["Product"]
-end "Reactor" sysstreams sysunitops
-
-@unitop begin
-    inlets --> ["Product"]
-    outlets --> ["Product1", "Product2"]
-    calc --> flowsplitter!
-    params --> [0.5]
-end "ProductSplitter" sysstreams sysunitops
-sysunitops["ProductSplitter"]()
-
-@unitop begin
-    inlets --> ["Product1"]
-    outlets --> ["Product1a", "Product1b"]
-    calc --> componentplitter!
-    params --> Dict([
-        "Hydrogen" => Dict(["Product1a" => 0.5]),
-        "Ethane" => Dict(["Product1b" => 0.3])
-    ])
-end "ComponentSplitter" sysstreams sysunitops
-sysunitops["ComponentSplitter"]()
+end "ComponentSplitter" fs;
+fs.unitops["ComponentSplitter"]();
 
 @unitop begin
     inlets --> ["Product1a", "Product1b", "Product2"]
     outlets --> ["Product3"]
     calc --> mixer!
-end "Mixer2" sysstreams sysunitops
-sysunitops["Mixer2"]()
+end "Mixer2" fs;
+fs.unitops["Mixer2"]();
 
-sysstreams["Product"] ≈ sysstreams["Product3"]
+fs.streams["Product"] ≈ fs.streams["Product3"];
 
-@boundary begin
-    unitops --> ["Mixer", "Reactor"]
-end b sysunitops
-
-b.atomclosures;
-b.closure;
-b.total_in.totalmassflow;
-b.total_out.totalmassflow;
-c1 = conversion(b, "Ethane")
-c2 = conversion(b, "Ethylene")
-sc2 = molar_selectivity(b, "Ethylene", "Ethane")
-
-copystream!(sysstreams, "C2", "eC2", factor = 1.05)
-copystream!(sysstreams, "H2", "eH2", factor = 0.95)
-copystream!(sysstreams, "Product", "eProduct")
-sysstreams["eMixed"] = emptystream(sysstreams, "eMixed") # We'll calculate this stream with the mixer model
+EthyleneHydrogenation(frac) = Reaction(fs, ["Ethylene", "Hydrogen"], ["Ethane"], [1.0, 1.0], [1.0], "Ethylene", frac);
 
 @unitop begin
-    inlets --> ["eH2", "eC2"]
-    outlets --> ["eMixed"]
-    calc --> mixer!
-end "eMixer" sysstreams sysunitops
-sysunitops["eMixer"]()
+    inlets --> ["Product3"]
+    outlets --> ["Product4"]
+    calc --> stoichiometric_reactor!
+    params --> [EthyleneHydrogenation(0.5)]
+end "Reactor2" fs;
+fs.unitops["Reactor2"]();
 
-@unitop begin
-    inlets --> ["eMixed"]
-    outlets --> ["eProduct"]
-end "eReactor" sysstreams sysunitops
+
+# generateBFD(fs, "./myflowsheet.svg")
+
+fs.streams["Mixed"] = 1.1*fs.streams["Mixed"];
+
+
 
 @boundary begin
-    unitops --> ["eMixer", "eReactor"]
-end b sysunitops
+    unitops --> ["Mixer"]
+end "B1" fs;
 
-corrections = calccorrections(b, "eProduct")
-b2 = closemb_simple(b, anchor = "eProduct")
+@boundary begin
+    unitops --> ["Reactor", "ProductSplitter"]
+end "B2" fs;
 
-showdata(b2)
+fs.boundaries["B1"];
 
-fs = Flowsheet(sysunitops, ["Reactor"], [1])
-addunitop!(fs, ["Mixer", "ProductSplitter", "ComponentSplitter", "Mixer2"])
+corrections = calccorrections(fs, λ = 0.0, anchor = "H2");
+closemb!(fs, corrections);
 
-fs(showoutput = false);
-# generateBFD(fs, "./myflowsheet.svg", displaybfd=false);
+fs.boundaries["B1"];
 
 
