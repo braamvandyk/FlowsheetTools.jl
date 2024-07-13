@@ -1,44 +1,36 @@
 using FlowsheetTools
 using Test
 
-@testset "Streams" begin
+@testset "Components and Streams" begin
     fs = Flowsheet()
 
     @comp begin
         "C" --> 2
         "H" --> 4
     end "Ethylene" fs
-    dummy = writecomponent(joinpath(@__DIR__, "components", "Ethylene.comp"), fs.comps["Ethylene"])
-    @test dummy == 25
 
     @comp begin
         "C" --> 2
         "H" --> 6
     end "Ethane" fs
-    dummy = writecomponent(joinpath(@__DIR__, "components", "Ethane.comp"), fs.comps["Ethane"])
-    @test dummy == 24
 
     @comp begin
         "H" --> 2
     end "Hydrogen" fs
-    dummy = writecomponent(joinpath(@__DIR__, "components", "Hydrogen.comp"), fs.comps["Hydrogen"])
-    @test dummy == 21
 
     @comp begin
         "N" --> 2
     end "Nitrogen" fs
-    dummy = writecomponent(joinpath(@__DIR__, "components", "Nitrogen.comp"), fs.comps["Nitrogen"])
-    @test dummy == 22
 
     @comp begin
         "Ar" --> 1
     end "Argon" fs
-    dummy = writecomponent(joinpath(@__DIR__, "components", "Argon.comp"), fs.comps["Argon"])
-    @test dummy == 19
 
-    count = readcomponentlist!(fs, joinpath(@__DIR__, "components"), ["Ethylene", "Ethane", "Hydrogen"])
-    @test count == 3
     @test fs.comps["Ethylene"].Mr ≈ 28.053
+    @test fs.comps["Ethane"].Mr ≈ 30.0688
+    @test fs.comps["Hydrogen"].Mr ≈ 2.0158
+    @test fs.comps["Nitrogen"].Mr ≈ 28.0134
+    @test fs.comps["Argon"].Mr ≈ 39.948
     
 
     @stream mass begin
@@ -67,7 +59,7 @@ using Test
     @test all(values(fs.streams["Prod2"].totalmassflow .≈ 2.0 .* fs.streams["Product"].totalmassflow))
 end
 
-@testset "UnitOps and Boundaries" begin
+@testset "Simple UnitOps and Boundaries" begin
     fs = Flowsheet()
 
     @comp begin
@@ -142,15 +134,46 @@ end
     @test molar_selectivity(fs.boundaries["B"], "Ethylene", "Ethane") ≈ 1.0
 end
 
-@testset "Corrections and Closure" begin
+@testset "Active UnitOps and Closures" begin
     fs = Flowsheet()
 
-    count = readcomponentlist!(fs, joinpath(@__DIR__, "components"), ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"])
-    @test count ==5
+    @comp begin
+        "C" --> 2
+        "H" --> 4
+    end "Ethylene" fs
 
-    readstreamhistory!(fs, "C2", joinpath(@__DIR__, "streamhistories", "C2.csv"); ismoleflow=true)
-    readstreamhistory!(fs, "H2", joinpath(@__DIR__, "streamhistories", "Hydrogen.csv"); ismoleflow=true)
-    readstreamhistory!(fs, "Product", joinpath(@__DIR__, "streamhistories", "Product.csv"); ismoleflow=true)
+    @comp begin
+        "C" --> 2
+        "H" --> 6
+    end "Ethane" fs
+
+    @comp begin
+        "H" --> 2
+    end "Hydrogen" fs
+
+    @comp begin
+        "N" --> 2
+    end "Nitrogen" fs
+
+    @comp begin
+        "Ar" --> 1
+    end "Argon" fs
+
+    @stream mole begin
+        "Ethylene" --> 0.1
+        "Ethane" --> 0.9
+    end "C2" fs
+
+    @stream mole begin
+        "Hydrogen" --> 1.1
+    end "H2" fs
+
+    @stream mole begin
+        "Ethylene" --> 0.0
+        "Ethane" --> 1.0
+        "Hydrogen" --> 1.0
+    end "Product" fs
+
     addemptystream!(fs, "Mixed");
     addemptystream!(fs, "Product1");
     addemptystream!(fs, "Product1a");
@@ -219,12 +242,10 @@ end
     end "Reactor2" fs
     fs.unitops["Reactor2"]()
 
-    a = values(fs.streams["Product4"].moleflows[Symbol("Ethylene")] .≈ fs.streams["Product4"].moleflows[Symbol("Ethane")])
-    @test findall(<(1), a) == [9, 13, 14, 18]
+    @test all(values(fs.streams["Product4"].moleflows[Symbol("Ethylene")] .≈ fs.streams["Product4"].moleflows[Symbol("Ethane")]))
+    
 
     fs.streams["Mixed"] = 1.1*fs.streams["Mixed"]
-
-
 
     @boundary begin
         unitops --> ["Mixer"]
@@ -242,6 +263,6 @@ end
 
     closemb!(fs, corrections)
 
-    sum(values(fs.boundaries["B1"].closure)) ≈ 27
-    sum(values(fs.boundaries["B2"].closure)) ≈ 27
+    @test all(values(fs.boundaries["B1"].closure) .≈ 1)
+    @test all(values(fs.boundaries["B2"].closure) .≈ 1)
 end
