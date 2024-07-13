@@ -34,7 +34,6 @@ using ArgCheck,                 # Replace simple @asserts with ArgCheck
       # Missings,                 # Used for handling missing data in data cleanup
       Optim,                    # Used to minimize objective function for mass balance reconciliations (replace with JuMP?)
       OrderedCollections,       # Used for OrderedDict
-      PrecompileTools,          # Used to do additional precompilation for faster start-up
       PrettyTables,             # Used for pretty printing
       # RowEchelon,               # Used for rref
       Statistics,               # Basic statistical functions
