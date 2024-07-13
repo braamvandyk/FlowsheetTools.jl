@@ -19,6 +19,9 @@ struct Stream
     moleflows::TimeArray
     totalmassflow::TimeArray
     atomflows::TimeArray
+
+    # Uncertainty via variance of total mass flow
+    σ::Float64
 end
 
 
@@ -120,8 +123,13 @@ function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
     moleflows_ta = TimeArray(timestamps, moleflows, allcomps)
     totalmassflows_ta = TimeArray(timestamps, totalmassflows, [:totalmassflows])
     atomflows_ta = TimeArray(timestamps, atomflows, [:atomflows])
+    if length(totalmassflows) > 1
+        σ = var(totalmassflows)
+    else
+        σ = 1.0
+    end
     
-    return Stream(name, numdata, complist, massflows_ta, moleflows_ta, totalmassflows_ta, atomflows_ta)
+    return Stream(name, numdata, complist, massflows_ta, moleflows_ta, totalmassflows_ta, atomflows_ta, σ)
 end
 
 
@@ -281,7 +289,9 @@ function Base.show(io::IO, stream::Stream)
         println(io)
         println(io, "Data length:\t$(stream.numdata)")
         println(io, "Data starts:\t$(timestamp(stream.massflows)[begin])")
-        println(io, "Data ends:\t$(timestamp(stream.massflows)[end])")   
+        println(io, "Data ends:\t$(timestamp(stream.massflows)[end])")
+        println(io)
+        println(io, "Variance in total mass flow:\t$(prettyround(stream.σ))")
     end
 end
 

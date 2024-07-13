@@ -38,6 +38,10 @@ function calccorrections(fs; customerror=nothing, anchor = nothing, totalweight=
     # This will be used to index into the correction factors vector
     allstreams  = String[]
 
+    # Places to store the inlets and outlets for each boundary
+    # This will be used to index into the correction factors vector
+    # For each boundary, i, we have allinlets[i] and alloutlets[i] with the names of the streams
+    # and allins[i] and allouts[i] with the number of inlets and outlets for the bounary.
     for (i, boundary) in enumerate(fs.boundaries)
         # boundary is a name => value pair from the boundary list, so use boundary.second to get the actual boundary object
         allstreams = vcat(allstreams, boundary.second.inlets)
@@ -55,19 +59,27 @@ function calccorrections(fs; customerror=nothing, anchor = nothing, totalweight=
         anchorindex = searchsorted(allstreams, anchor)
         deleteat!(allstreams, anchorindex)
     end
-    # Start off with all factors = 1, so no corrections
+
+    # Start off with all factors = 1.0, so no corrections
     allfactors = ones(length(allstreams))
+
+    # And get the variances in the flows for the streams into an array for quick access
+    allsigmas = similar(allfactors)
+    for (i, stream) in enumerate(allstreams)
+        allsigmas[i] = fs.streams[stream].σ
+    end
 
     numdata = fs.streams[allinlets[1][1]].numdata
 
 
-    function boundaryerror(boundarynum, allfactors)
+    @inline function boundaryerror(boundarynum, allfactors, allsigmas)
     # Extract the streams involved with this boundary, look up the relevant factors
     # and then calculate the error from this boundary.
 
-        function thiserror(factors)
+        @inline function thiserror(factors, sigmas)
             # This function receives the factors for all streams, with the anchor set to one,
-            # if present. First inlets, then outlets.
+            # if present. First inlets, then outlets. It then pulls the correct inlets and outlets
+            # from the list and gets the error for this boundary.
 
             # Since inlets and outlets are arrays of Stream, summing them produces Stream objects
             total_in = sum(factors[1:ins] .* fs.streams[inlets])
@@ -91,7 +103,7 @@ function calccorrections(fs; customerror=nothing, anchor = nothing, totalweight=
                     end
                 end
             end
-            totalerr = totalweight*masserror + atomerror + λ*sum(abs2, 1.0 .- factors)
+            totalerr = totalweight*masserror + atomerror + λ*sum(abs2, (1.0 .- factors) ./ sigmas)
     
             return totalerr
         end
@@ -105,34 +117,40 @@ function calccorrections(fs; customerror=nothing, anchor = nothing, totalweight=
         outlets = alloutlets[boundarynum]
 
         # Now get the factors for each stream [inlets outlets] and remember to set the anchor
-        # to one, if it is in this boundary
+        # to one, if it is in this boundary. Also collect the variances for the streams to use
+        # as weights for the renormalisations.
         factors = Array{Float64}(undef, ins + outs)
+        sigmas = Array{Float64}(undef, ins + outs)
         for (index, inlet) in enumerate(inlets)
             if inlet == anchor
                 factors[index] = 1.0
+                sigmas[index] = 1.0 # Don't bother with a weight, as the contribution is zero.
             else
                 allstreams_index = findfirst(isequal(inlet), allstreams)
                 factors[index] = allfactors[allstreams_index]
+                sigmas[index] = allsigmas[allstreams_index]
             end
         end
         for (index, outlet) in enumerate(outlets)
             if outlet == anchor
                 factors[ins + index] = 1.0
+                sigmas[ins + index] = 1.0 # Don't bother with a weight, as the contribution is zero.
             else
                 allstreams_index = findfirst(isequal(outlet), allstreams)
                 factors[ins + index] = allfactors[allstreams_index]
+                sigmas[ins + index] = allsigmas[allstreams_index]
             end
         end
 
 
-        return thiserror(factors)
+        return thiserror(factors, sigmas)
     end
 
     function loss(allfactors)
         totalerr = 0.0
 
         for boundarynum in 1:length(fs.boundaries)
-            totalerr += boundaryerror(boundarynum, allfactors)
+            totalerr += boundaryerror(boundarynum, allfactors, allsigmas)
         end
 
         if !isnothing(customerror)
