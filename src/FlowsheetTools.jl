@@ -101,7 +101,7 @@ end
 
 @setup_workload begin
       @compile_workload begin
-            include("./precompile./workload.jl")
+            include("./precompile/workload.jl")
       end
 end
 
