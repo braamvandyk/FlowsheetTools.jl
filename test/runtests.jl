@@ -3,7 +3,7 @@ using Test
 
 @testset "Streams" begin
     fs = Flowsheet()
-    count = readcomponentlist!(fs, "components", ["Ethylene", "Ethane", "Hydrogen"])
+    count = readcomponentlist!(fs, "./components", ["Ethylene", "Ethane", "Hydrogen"])
     @test count == 3
     @test fs.comps["Ethylene"].Mr ≈ 28.053
     
@@ -112,12 +112,12 @@ end
 @testset "Corrections and Closure" begin
     fs = Flowsheet()
 
-    count = readcomponentlist!(fs, "components", ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"])
+    count = readcomponentlist!(fs, "./components", ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"])
     @test count ==5
 
-    readstreamhistory!(fs, "C2", joinpath("streamhistories", "C2.csv"); ismoleflow=true)
-    readstreamhistory!(fs, "H2", joinpath("streamhistories", "Hydrogen.csv"); ismoleflow=true)
-    readstreamhistory!(fs, "Product", joinpath("streamhistories", "Product.csv"); ismoleflow=true)
+    readstreamhistory!(fs, "C2", joinpath("./streamhistories", "C2.csv"); ismoleflow=true)
+    readstreamhistory!(fs, "H2", joinpath("./streamhistories", "Hydrogen.csv"); ismoleflow=true)
+    readstreamhistory!(fs, "Product", joinpath("./streamhistories", "Product.csv"); ismoleflow=true)
     addemptystream!(fs, "Mixed");
     addemptystream!(fs, "Product1");
     addemptystream!(fs, "Product1a");
