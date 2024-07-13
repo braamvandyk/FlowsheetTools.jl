@@ -589,9 +589,9 @@ Writes in a stream history file (CSV file).
 """
 function writestreamhistory(stream, filename, moleflow=false)
     if moleflow
-        writetimearray(stream.moleflows, filename)
+        writetimearray(stream.moleflows, filename, format="dd/mm/yyyy HH:MM", delim=',')
     else
-        writetimearray(stream.massflows, filename)
+        writetimearray(stream.massflows, filename, format="dd/mm/yyyy HH:MM", delim=',')
     end
 
     return nothing
