@@ -1,6 +1,6 @@
 fs = Flowsheet();
 
-count = readcomponentlist!(fs, "components", ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"]);
+count = readcomponentlist!(fs, joinpath(@__DIR__, "components"), ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"]);
 
 
 readstreamhistory!(fs, "C2", joinpath("streamhistories", "C2.csv"); ismoleflow=true);
