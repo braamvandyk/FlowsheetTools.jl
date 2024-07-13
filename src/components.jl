@@ -237,7 +237,7 @@ function readcomponentlist!(fs, foldername, filenames)
             fs.comps[fn] = readcomponent(joinpath(foldername, fname))
             count += 1
         else
-            @warn "Component file $(fname) not found."
+            @warn "Component file $(joinpath(foldername, fname)) not found."
         end
     end
 
