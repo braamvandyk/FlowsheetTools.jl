@@ -24,6 +24,18 @@ using Test
     dummy = writecomponent(joinpath(@__DIR__, "components", "Hydrogen.comp"), fs.comps["Hydrogen"])
     @test dummy == 21
 
+    @comp begin
+        "N" --> 2
+    end "Nitrogen" fs
+    dummy = writecomponent(joinpath(@__DIR__, "components", "Nitrogen.comp"), fs.comps["Nitrogen"])
+    @test dummy == 22
+
+    @comp begin
+        "Ar" --> 1
+    end "Argon" fs
+    dummy = writecomponent(joinpath(@__DIR__, "components", "Argon.comp"), fs.comps["Argon"])
+    @test dummy == 19
+
     count = readcomponentlist!(fs, joinpath(@__DIR__, "components"), ["Ethylene", "Ethane", "Hydrogen"])
     @test count == 3
     @test fs.comps["Ethylene"].Mr ≈ 28.053
