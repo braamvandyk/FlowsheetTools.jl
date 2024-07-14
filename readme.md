@@ -47,4 +47,17 @@ need to do that, and everything in the flowsheet is nice and consistent - one li
 used in one list of streams, one lost of unit operations etc.
 
 I am sure that I'll keep on tinkering with this for some time still. At the very least to add more
-reconciliation algorithsm, and maybe a few more unit operations. I am VERY open to ideas and collaborators.
+reconciliation algorithms, and maybe a few more unit operations. I am VERY open to ideas and collaborators.
+
+### A note on the reconciliation algorithm
+
+There are many algorithms that will modify the stream compositions to get a perfect closure. I am NOT a fan...
+In my work, we deal with complex streams from Fischer-Tropsch Syntheses. This means potentially hundreds of 
+components, but practically at least 60+. These stream compositions have several constraints - they must obey
+an Anderson-Schultz-Flory distribution, certain ratios of paraffin : olefin : carbonyl : alcohol : acid : ... etc.
+Opening up the stream compositions to modification not only make the problem extremely high-dimensional, but, is
+extremely likely to break all of these constrains. Better, thus, to only modify the stream flows and do the best
+you can with the available analyses.
+
+This is why the existing algorithm looks the way it does. Adding any other algorithm is of course not a problem,
+but also not a priority. If anyone feels they really need some other methods, PRs would be more than welcome.
