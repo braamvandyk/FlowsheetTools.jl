@@ -292,7 +292,7 @@ fs.unitops["Mixer"]()
 # These calculations will supply the contents of the outlet streams based on the inlets streams and supplied model parameters.
 # They are only needed if there is no information on the outlet streams, and these are needed to complete a mass balance or calculate a KPI.
 
-#Another example:
+# Another example:
 
 @unitop begin
     inlets --> ["Mixed"]
