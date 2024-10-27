@@ -1,5 +1,5 @@
 using Dates, Loess, Interpolations, Missings, TimeSeries
-
+using ChangePointDetection
 # # These are used only during testing
 using Plots, Distributions
 
@@ -49,6 +49,43 @@ function gendata(timestamps, period, fracfilled, fracdouble)
         end
     end
     
+    return data
+end
+
+function genstepdata(timestamps, period, fracfilled, fracdouble, stepsize=0.0)
+    # We use HoL since we need the x-axis to run from 0.0
+    # The timestamps are also converted into a Float64 with hours since start
+    HoL = calcHoL(timestamps)
+    data = zeros(Union{Float64, Missing}, length(times))
+
+    for i in eachindex(HoL)
+        data[i] = sin(π*period*(HoL[i]/(Hour(endtime - starttime)/Hour(1))))
+        norm = Normal(0, 0.2*abs(data[i]))
+        data[i] += rand(norm)
+    end
+
+    len = length(data)
+    totalmissing = round(Int, (1 - fracfilled)*len)
+
+    # Add missing data
+    nummissing = 0
+    numdouble = 0
+
+    while nummissing < totalmissing
+        idx = rand(1:len)
+        if ismissing(data[idx])
+            continue
+        end
+        data[idx] = missing
+        nummissing += 1
+        if idx < len && rand() < fracdouble
+            data[idx+1] = missing            
+            numdouble += 1
+        end
+    end
+    
+    stepidx = rand(1:len)
+    data[stepidx:end] .= data[stepidx:end] .+= stepsize # Add a step change to the end of the data
     return data
 end
 
@@ -129,16 +166,23 @@ endtime = DateTime(2023, 1, 12, 24, 0)
 times = starttime:Hour(6):endtime
 
 # raw = TimeArray(times, [gendata(times, 2, 0.75) gendata(times, 2, 0.75)], [:raw1, :raw2])
-raw = TimeArray(times, gendata(times, 2, 0.75, 0.5), [:raw1])
+raw = TimeArray(times, genstepdata(times, 20, 0.75, 0.5, 10) .+ 50.0, [:raw1])
 
 sf1 = filldata(raw)
 scatter(sf1, leg=:bottomleft)
+ylims!((0.0, 70.0))
 scatter!(raw)
 
-sf2 = filldata(raw, denoise = true, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
-scatter(sf2)
-scatter!(raw)
+profile = ChangePointDetection.lsdd_profile(values(sf1.raw1); window = 5)
+cps = ChangePointDetection.changepoints(values(sf1.raw1), window = 10)
 
-sf3 = filldata(raw, allsmoothed = true, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
-scatter(sf3)
-scatter!(raw)
+# sf2 = filldata(raw, denoise = true, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
+# scatter(sf2)
+# scatter!(raw)
+
+# sf3 = filldata(raw, allsmoothed = true, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
+# scatter(sf3)
+# scatter!(raw)
+
+# https://stats.lse.ac.uk/fryzlewicz/wbs/wbs.pdf
+
