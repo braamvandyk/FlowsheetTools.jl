@@ -29,9 +29,9 @@ using ArgCheck,                 # Replace simple @asserts with ArgCheck
       # HypothesisTests,          # Used for Augmented Dickey-Fuller test to see if data has a slope between changepoints
       Interpolations,           # Used for extrapolation to endpoints in cleaning up data
       InvertedIndices,          # Used for dropping selected rows and columns from matrices
-      # Loess,                    # Used for smoothing and filling data sets
+      Loess,                    # Used for smoothing and filling data sets
       MacroTools,               # Used for @comp, @stream etc
-      # Missings,                 # Used for handling missing data in data cleanup
+      Missings,                 # Used for handling missing data in data cleanup
       Optim,                    # Used to minimize objective function for mass balance reconciliations (replace with JuMP?)
       OrderedCollections,       # Used for OrderedDict
       PrettyTables,             # Used for pretty printing
