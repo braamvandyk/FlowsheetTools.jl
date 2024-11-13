@@ -208,40 +208,40 @@ begin
                  e f g h]
 
     pltraw = let
-        scatter(alldata[:raw], leg=:bottomleft, size=(900, 400));
+        scatter(alldata[:raw], leg=:bottomleft, size=(640, 480));
         plot!(pure[:pure])
     end;
 
     pltdef02 = let 
-        scatter(alldata[:default02], leg=:bottomleft, size=(900, 400))
+        scatter(alldata[:default02], leg=:bottomleft, size=(640, 480))
         plot!(pure[:pure])
     end;
 
     pltnoise02 = let 
-        scatter(alldata[:denoise02], leg=:bottomleft, size=(900, 400))
+        scatter(alldata[:denoise02], leg=:bottomleft, size=(640, 480))
         plot!(pure[:pure])
     end;
 
     pltsmooth02 = let 
-        scatter(alldata[:fullsmooth02], leg=:bottomleft, size=(900, 400))
+        scatter(alldata[:fullsmooth02], leg=:bottomleft, size=(640, 480))
         plot!(pure[:pure])
     end;
 
     pltdef05 = let 
-        scatter(alldata[:default05], leg=:bottomleft, size=(900, 400))
+        scatter(alldata[:default05], leg=:bottomleft, size=(640, 480))
         plot!(pure[:pure])
     end;
 
     pltnoise05 = let 
-        scatter(alldata[:denoise05], leg=:bottomleft, size=(900, 400))
+        scatter(alldata[:denoise05], leg=:bottomleft, size=(640, 480))
         plot!(pure[:pure])
     end;
 
     pltsmooth05 = let 
-        scatter(alldata[:fullsmooth05], leg=:bottomleft, size=(900, 400))
+        scatter(alldata[:fullsmooth05], leg=:bottomleft, size=(640, 480))
         plot!(pure[:pure])
     end;
 
-    plot(pltraw, pltdef02, pltnoise02, pltsmooth02, pltraw, pltdef05, pltnoise05, pltsmooth05, layout = l, size=(3600, 800))
+    plot(pltraw, pltdef02, pltnoise02, pltsmooth02, pltraw, pltdef05, pltnoise05, pltsmooth05, layout = l, size=(2560, 960))
 end
 savefig("cleandemo.png")
