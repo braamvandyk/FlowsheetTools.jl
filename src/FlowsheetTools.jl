@@ -17,7 +17,7 @@ export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, del
         calccorrections, calccorrections_anchor, closemb!,
         conversion, molar_selectivity,
         Flowsheet, addunitop!, setorder!, generateBFD, componentnames,
-        members
+        members,filldata
 
 
 using ArgCheck,                 # Replace simple @asserts with ArgCheck
@@ -63,6 +63,7 @@ include("boundaries.jl")
 include("kpis.jl")
 include("closure.jl")
 include("flowsheets.jl")
+include("datacleaning.jl")
 
 
 
