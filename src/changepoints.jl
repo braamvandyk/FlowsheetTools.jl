@@ -35,4 +35,4 @@ function WBS(data, M = 5000, C=1.0, σ = mad(data))
         return cost
     end
     
-
+end
