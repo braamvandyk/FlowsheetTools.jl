@@ -21,7 +21,7 @@ function gendata(timestamps, period, fracfilled, fracdouble)
     # We use HoL since we need the x-axis to run from 0.0
     # The timestamps are also converted into a Float64 with hours since start
     HoL = calcHoL(timestamps)
-    basedata = zeros(Union{Float64, Missing}, length(times))
+    basedata = zeros(Float64, length(times))
     data = zeros(Union{Float64, Missing}, length(times))
 
     for i in eachindex(HoL)
@@ -53,42 +53,6 @@ function gendata(timestamps, period, fracfilled, fracdouble)
     return data, basedata
 end
 
-function genstepdata(timestamps, period, fracfilled, fracdouble, stepsize=0.0)
-    # We use HoL since we need the x-axis to run from 0.0
-    # The timestamps are also converted into a Float64 with hours since start
-    HoL = calcHoL(timestamps)
-    data = zeros(Union{Float64, Missing}, length(times))
-
-    for i in eachindex(HoL)
-        data[i] = sin(π*period*(HoL[i]/(Hour(endtime - starttime)/Hour(1))))
-        norm = Normal(0, 0.2*abs(data[i]))
-        data[i] += rand(norm)
-    end
-
-    len = length(data)
-    totalmissing = round(Int, (1 - fracfilled)*len)
-
-    # Add missing data
-    nummissing = 0
-    numdouble = 0
-
-    while nummissing < totalmissing
-        idx = rand(1:len)
-        if ismissing(data[idx])
-            continue
-        end
-        data[idx] = missing
-        nummissing += 1
-        if idx < len && rand() < fracdouble
-            data[idx+1] = missing            
-            numdouble += 1
-        end
-    end
-    
-    stepidx = rand(1:len)
-    data[stepidx:end] .= data[stepidx:end] .+= stepsize # Add a step change to the end of the data
-    return data
-end
 
 
 """
@@ -109,7 +73,7 @@ function filldata(raw; fullsmooth=false, denoise=false, threshold = 2, α=0.3,
 
     HoL = calcHoL(timestamp(raw))
     fulldata = similar(values(raw))
-    data = similar(values(raw))
+    data = zeros(nonmissingtype(eltype(values(raw))), length(values(raw)))
 
     for (i, col) in enumerate(colnames(raw))
         rawvals = values(raw[col])
@@ -191,8 +155,6 @@ rename!(sf5, [:denoise05])
 sf6 = filldata(raw, fullsmooth = true, α=0.5, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
 rename!(sf6, [:fullsmooth05])
 
-alldata = TimeSeries.merge(raw, sf1, sf2, sf3, sf4, sf5, sf6)
-
 # https://stats.lse.ac.uk/fryzlewicz/wbs/wbs.pdf
 
 # begin
@@ -203,12 +165,12 @@ alldata = TimeSeries.merge(raw, sf1, sf2, sf3, sf4, sf5, sf6)
 # end
 
 begin
-    alldata = TimeSeries.merge(raw, sf1, sf2, sf3, sf4, sf5, sf6)
+    alldata = TimeSeries.merge(sf1, sf2, sf3, sf4, sf5, sf6)
     l = @layout [a b c d;
                  e f g h]
 
     pltraw = let
-        scatter(alldata[:raw], leg=:bottomleft, size=(900, 400));
+        scatter(raw, leg=:bottomleft, size=(900, 400));
         plot!(pure[:pure])
     end;
 
