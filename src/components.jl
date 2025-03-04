@@ -233,7 +233,7 @@ function readcomponentlist!(fs, foldername, filenames)
     
     for fn in filenames
         fname = fn * ".comp"
-        if lowercase(fname) in available
+        if fname in available
             fs.comps[fn] = readcomponent(joinpath(foldername, fname))
             count += 1
         else
