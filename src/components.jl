@@ -176,7 +176,7 @@ function writecomponent(filename, comp)
     end
     str = str*string(comp.Mr)
     
-    filename = lowercase(filename)   
+    filename = endswith(filename, ".comp") ? filename : filename * ".comp"   
     open(filename, "w") do io
         write(io, str)
     end
