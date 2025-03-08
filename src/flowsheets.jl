@@ -4,14 +4,26 @@
 #
 #----------------------------------------------------------------------------
 
-struct Flowsheet
-    comps::ComponentList
+mutable struct Flowsheet
+    comps::Union{Nothing, ComponentList} #ComponentList
     streams::StreamList
     unitops::UnitOpList
     boundaries::BoundaryList
 
     rununits::Vector{String}
     runorder::Vector{Int}
+
+    function Flowsheet()
+        streamlist = StreamList()
+        unitlist = UnitOpList()
+        boundarylist = BoundaryList()
+
+        fs = new(nothing, streamlist, unitlist, boundarylist, String[], Int[])
+        complist = ComponentList(fs)
+        fs.comps = complist
+    
+        return fs
+    end
 end
 
 
@@ -44,14 +56,7 @@ end
 #----------------------------------------------------------------------------
 
 
-function Flowsheet()
-    complist = ComponentList()
-    streamlist = StreamList()
-    unitlist = UnitOpList()
-    boundarylist = BoundaryList()
 
-    return Flowsheet(complist, streamlist, unitlist, boundarylist, String[], Int[])
-end
 
 
 #----------------------------------------------------------------------------

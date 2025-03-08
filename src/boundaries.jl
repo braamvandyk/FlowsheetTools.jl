@@ -183,7 +183,7 @@ function Base.show(io::IO, b::BalanceBoundary)
     pretty_table(io, b.total_in.massflows, display_size=(14, -1))
     println(io, "Combined Product Mass Flows:")
     pretty_table(io, b.total_out.massflows, display_size=(14, -1))
-    println(io, "\nElemental closures (-1.0 if not present):")
+    println(io, "\nElemental closures (0.0 if not present):")
     pretty_table(io, b.atomclosures, display_size=(14, -1))   
 end
 
