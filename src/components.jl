@@ -13,6 +13,7 @@ end
 
 struct ComponentList
     list::OrderedDict{String, Component}
+    parent
 end
 
 
@@ -48,9 +49,14 @@ end
 Constructor for an empty component list. Components are added when created via the @comp macro.
 
 """
+function ComponentList(parent)
+    l = OrderedDict{String, Component}()
+    return ComponentList(l, parent)
+end
+
 function ComponentList()
     l = OrderedDict{String, Component}()
-    return ComponentList(l)
+    return ComponentList(l, nothing)
 end
 
 
@@ -63,7 +69,8 @@ end
 
 function Base.setindex!(A::ComponentList, X::Component, idx::String)
     A.list[idx] = X
-
+    
+    !isnothing(A.parent) && refreshcomplist(A.parent)
     return nothing
 end
 
@@ -166,8 +173,8 @@ Write a Component struct to a file.
 
 """
 function writecomponent(filename, comp)
-    str = "$(comp.name)\n"
-    str = str*string(length(comp.atoms))*"\n"
+    # str = "$(comp.name)\n"
+    str = string(length(comp.atoms))*"\n"
     for atom in comp.atoms
         str = str*atom*"\n"
     end
@@ -197,22 +204,21 @@ function readcomponent(filename)
     lines = readlines(f)
     close(f)
 
-    name = lines[1]
-    count = parse(Int, lines[2])
+    count = parse(Int, lines[1])
 
     atoms = Vector{String}(undef, count)
     for i in 1:count
-        atoms[i] = lines[i+2]
+        atoms[i] = lines[i+1]
     end
 
     counts = Vector{Int}(undef, count)
     for i in 1:count
-        counts[i] = parse(Int, lines[i+2+count])
+        counts[i] = parse(Int, lines[i+1+count])
     end
 
     Mr = parse(Float64, lines[end])
 
-    return Component(name, atoms, counts, Mr)
+    return Component(filename, atoms, counts, Mr)
 end
 
 

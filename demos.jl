@@ -178,13 +178,11 @@ fs.streams["Feed"]
 # In the data files (*.csv), we had columns of data for ethylene, ethane and hydrogen, but our list of components also includes nitrogen.
 # We automatically set zero flows for amy components not in the file, so all the streams contain all of the components (for our continued sanity...).
 
-# We can still add components to the component list after the streams were created. If we do, then we should also call `refreshcomplist(fs)` to add zero flows for all of these new components to the existing streams in the stream list.
+# We can still add components to the component list after the streams were created. If we do, then zero flows for all of these new components are added to the existing streams in the stream list.
     
 @comp begin
     Ar --> 1
 end "Argon" fs
-
-refreshcomplist(fs)
 
 fs.streams["Feed"]
 
