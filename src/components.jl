@@ -176,7 +176,7 @@ function writecomponent(filename, comp)
     end
     str = str*string(comp.Mr)
     
-    filename = lowercase(filename)   
+    filename = endswith(filename, ".comp") ? filename : filename * ".comp"   
     open(filename, "w") do io
         write(io, str)
     end
@@ -233,7 +233,7 @@ function readcomponentlist!(fs, foldername, filenames)
     
     for fn in filenames
         fname = fn * ".comp"
-        if lowercase(fname) in available
+        if fname in available
             fs.comps[fn] = readcomponent(joinpath(foldername, fname))
             count += 1
         else
