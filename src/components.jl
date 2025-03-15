@@ -38,7 +38,7 @@ function Component(name, atoms, counts)
     for (i, atom) in enumerate(atoms)
         Mr += counts[i]*Atoms.atomweights[atom]
     end
-    return Component(name, atoms, counts, Mr)
+    return Component(string(name), atoms, counts, Mr)
 end
 
 
@@ -71,6 +71,12 @@ function Base.setindex!(A::ComponentList, X::Component, idx::String)
     A.list[idx] = X
     
     !isnothing(A.parent) && refreshcomplist(A.parent)
+    return nothing
+end
+
+function Base.setindex!(A::ComponentList, X::Component, idx::Symbol)
+    Base.setindex!(A, X, string(idx))
+
     return nothing
 end
 
@@ -133,7 +139,7 @@ end
 Defines a Component with the specified name and atomic composition and add it to fs.comps, a ComponentList, inside fs::Flowsheet.
 
 """
-macro comp(ex::Expr, name::String, fs::Symbol)      
+macro comp(ex::Expr, name, fs::Symbol)      
     local atoms = String[]
     local counts = Int[]
 
@@ -153,8 +159,8 @@ macro comp(ex::Expr, name::String, fs::Symbol)
             end
         end
     end
-    
-    return :($(esc(fs)).comps[$name] = Component($name, $atoms, $counts))
+
+    return :($(esc(fs)).comps[$(esc(name))] = Component($(esc(name)), $atoms, $counts))
 end
 
 
