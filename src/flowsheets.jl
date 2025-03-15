@@ -38,7 +38,7 @@ function (fs::Flowsheet)(neworder = nothing; showoutput=true)
         end
     else
         @argcheck length(neworder) == length(fs.rununits) "neworder must have same length as rununits"
-        for i in 1:length(fs.rununits)
+        for i in 1:length(neworder)
             idx = findfirst(==(i), neworder)
             showoutput && println(i, "  ", fs.unitops[fs.rununits[idx]].name)
             fs.unitops[fs.rununits[idx]]()
