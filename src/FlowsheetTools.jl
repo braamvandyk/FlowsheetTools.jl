@@ -70,7 +70,7 @@ include("flowsheets.jl")
 
     function members(a)
 
-Returns the names of the components. streams or mass balance boundaries in the `ComponentList`, `StreamList` or `BoundaryList`.
+Returns the names of the components, streams or mass balance boundaries in the `ComponentList`, `StreamList` or `BoundaryList`.
 
 julia> members(fs.comps)
 5-element Vector{String}:
