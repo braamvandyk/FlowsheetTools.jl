@@ -1,6 +1,5 @@
-using Dates, Loess, Interpolations, Missings, TimeSeries, Statistics
-
 # # These are used only during testing
+using Dates, Loess, Interpolations, Missings, TimeSeries, Statistics
 using Plots, Distributions
 
 """
@@ -68,7 +67,7 @@ If `denoise` is true, datapoints will be replaced with the smoothed value when `
 If `allsmoothed` is true, all values are smoothed using LOESS, otherwise only missings are filled.
 
 """
-function filldata(raw; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
+function filldata(raw::TimeArray; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
     suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
 
     HoL = calcHoL(timestamp(raw))
@@ -126,86 +125,93 @@ function filldata(raw; fullsmooth=false, denoise=false, threshold = 2, α=0.3,
     return TimeArray(timestamp(raw), data, colnames(raw))
 end
 
+function filldata(raw::Stream, basis=:mass; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
+    suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
+
+    if basis == :mass
+
+end
+
 
 # Generate dummy data with missing values
-# starttime = DateTime(2023, 1, 1, 0, 0)
-# endtime = DateTime(2023, 1, 12, 24, 0)
-# times = starttime:Hour(6):endtime
+starttime = DateTime(2023, 1, 1, 0, 0)
+endtime = DateTime(2023, 1, 12, 24, 0)
+times = starttime:Hour(6):endtime
 
-# rawvals, purevals = gendata(times, 2, 0.75, 0.5)
-# raw = TimeArray(times, rawvals, [:raw])
-# pure = TimeArray(times, purevals, [:pure])
-# # raw = TimeArray(times, genstepdata(times, 20, 0.75, 0.5, 10) .+ 50.0, [:raw1])
+rawvals, purevals = gendata(times, 2, 0.75, 0.5)
+raw = TimeArray(times, rawvals, [:raw])
+pure = TimeArray(times, purevals, [:pure])
+# raw = TimeArray(times, genstepdata(times, 20, 0.75, 0.5, 10) .+ 50.0, [:raw1])
 
-# sf1 = filldata(raw)
-# rename!(sf1, [:default02])
+sf1 = filldata(raw)
+rename!(sf1, [:default02])
 
-# sf2 = filldata(raw, denoise = true)
-# rename!(sf2, [:denoise02])
+sf2 = filldata(raw, denoise = true)
+rename!(sf2, [:denoise02])
 
-# sf3 = filldata(raw, fullsmooth = true, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
-# rename!(sf3, [:fullsmooth02])
+sf3 = filldata(raw, fullsmooth = true, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
+rename!(sf3, [:fullsmooth02])
 
-# sf4 = filldata(raw, α=0.5)
-# rename!(sf4, [:default05])
+sf4 = filldata(raw, α=0.5)
+rename!(sf4, [:default05])
 
-# sf5 = filldata(raw, denoise = true, α=0.5)
-# rename!(sf5, [:denoise05])
+sf5 = filldata(raw, denoise = true, α=0.5)
+rename!(sf5, [:denoise05])
 
-# sf6 = filldata(raw, fullsmooth = true, α=0.5, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
-# rename!(sf6, [:fullsmooth05])
+sf6 = filldata(raw, fullsmooth = true, α=0.5, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
+rename!(sf6, [:fullsmooth05])
 
-# alldata = TimeSeries.merge(raw, sf1, sf2, sf3, sf4, sf5, sf6)
+alldata = TimeSeries.merge(raw, sf1, sf2, sf3, sf4, sf5, sf6)
 
-# # https://stats.lse.ac.uk/fryzlewicz/wbs/wbs.pdf
-
-# # begin
-# #     scatter(raw, ms=6, label="raw")
-# #     scatter!(sf1, label="default", marker=:square)
-# #     scatter!(sf2, label="denoise", marker=:diamond)
-# #     scatter!(sf3, label="allsmoothed", ms=2)
-# # end
+# https://stats.lse.ac.uk/fryzlewicz/wbs/wbs.pdf
 
 # begin
-#     alldata = TimeSeries.merge(raw, sf1, sf2, sf3, sf4, sf5, sf6)
-#     l = @layout [a b c d;
-#                  e f g h]
-
-#     pltraw = let
-#         scatter(alldata[:raw], leg=:bottomleft, size=(640, 480));
-#         plot!(pure[:pure])
-#     end;
-
-#     pltdef02 = let 
-#         scatter(alldata[:default02], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     pltnoise02 = let 
-#         scatter(alldata[:denoise02], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     pltsmooth02 = let 
-#         scatter(alldata[:fullsmooth02], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     pltdef05 = let 
-#         scatter(alldata[:default05], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     pltnoise05 = let 
-#         scatter(alldata[:denoise05], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     pltsmooth05 = let 
-#         scatter(alldata[:fullsmooth05], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     plot(pltraw, pltdef02, pltnoise02, pltsmooth02, pltraw, pltdef05, pltnoise05, pltsmooth05, layout = l, size=(2560, 960))
+#     scatter(raw, ms=6, label="raw")
+#     scatter!(sf1, label="default", marker=:square)
+#     scatter!(sf2, label="denoise", marker=:diamond)
+#     scatter!(sf3, label="allsmoothed", ms=2)
 # end
-# savefig("cleandemo.png")
+
+begin
+    alldata = TimeSeries.merge(raw, sf1, sf2, sf3, sf4, sf5, sf6)
+    l = @layout [a b c d;
+                 e f g h]
+
+    pltraw = let
+        scatter(alldata[:raw], leg=:bottomleft, size=(640, 480));
+        plot!(pure[:pure])
+    end;
+
+    pltdef02 = let 
+        scatter(alldata[:default02], leg=:bottomleft, size=(640, 480))
+        plot!(pure[:pure])
+    end;
+
+    pltnoise02 = let 
+        scatter(alldata[:denoise02], leg=:bottomleft, size=(640, 480))
+        plot!(pure[:pure])
+    end;
+
+    pltsmooth02 = let 
+        scatter(alldata[:fullsmooth02], leg=:bottomleft, size=(640, 480))
+        plot!(pure[:pure])
+    end;
+
+    pltdef05 = let 
+        scatter(alldata[:default05], leg=:bottomleft, size=(640, 480))
+        plot!(pure[:pure])
+    end;
+
+    pltnoise05 = let 
+        scatter(alldata[:denoise05], leg=:bottomleft, size=(640, 480))
+        plot!(pure[:pure])
+    end;
+
+    pltsmooth05 = let 
+        scatter(alldata[:fullsmooth05], leg=:bottomleft, size=(640, 480))
+        plot!(pure[:pure])
+    end;
+
+    plot(pltraw, pltdef02, pltnoise02, pltsmooth02, pltraw, pltdef05, pltnoise05, pltsmooth05, layout = l, size=(2560, 960))
+end
+savefig("cleandemo.png")
