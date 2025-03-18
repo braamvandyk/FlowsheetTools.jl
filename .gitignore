@@ -3,3 +3,4 @@
 *.png
 *.dll
 docs/build/
+.VSCodeCounter/

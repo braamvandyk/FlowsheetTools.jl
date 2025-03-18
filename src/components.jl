@@ -13,6 +13,7 @@ end
 
 struct ComponentList
     list::OrderedDict{String, Component}
+    parent
 end
 
 
@@ -37,7 +38,7 @@ function Component(name, atoms, counts)
     for (i, atom) in enumerate(atoms)
         Mr += counts[i]*Atoms.atomweights[atom]
     end
-    return Component(name, atoms, counts, Mr)
+    return Component(string(name), atoms, counts, Mr)
 end
 
 
@@ -48,9 +49,14 @@ end
 Constructor for an empty component list. Components are added when created via the @comp macro.
 
 """
+function ComponentList(parent)
+    l = OrderedDict{String, Component}()
+    return ComponentList(l, parent)
+end
+
 function ComponentList()
     l = OrderedDict{String, Component}()
-    return ComponentList(l)
+    return ComponentList(l, nothing)
 end
 
 
@@ -63,6 +69,13 @@ end
 
 function Base.setindex!(A::ComponentList, X::Component, idx::String)
     A.list[idx] = X
+    
+    !isnothing(A.parent) && refreshcomplist(A.parent)
+    return nothing
+end
+
+function Base.setindex!(A::ComponentList, X::Component, idx::Symbol)
+    Base.setindex!(A, X, string(idx))
 
     return nothing
 end
@@ -126,7 +139,7 @@ end
 Defines a Component with the specified name and atomic composition and add it to fs.comps, a ComponentList, inside fs::Flowsheet.
 
 """
-macro comp(ex::Expr, name::String, fs::Symbol)      
+macro comp(ex::Expr, name, fs::Symbol)      
     local atoms = String[]
     local counts = Int[]
 
@@ -146,8 +159,8 @@ macro comp(ex::Expr, name::String, fs::Symbol)
             end
         end
     end
-    
-    return :($(esc(fs)).comps[$name] = Component($name, $atoms, $counts))
+
+    return :($(esc(fs)).comps[$(esc(name))] = Component($(esc(name)), $atoms, $counts))
 end
 
 
@@ -166,8 +179,8 @@ Write a Component struct to a file.
 
 """
 function writecomponent(filename, comp)
-    str = "$(comp.name)\n"
-    str = str*string(length(comp.atoms))*"\n"
+    # str = "$(comp.name)\n"
+    str = string(length(comp.atoms))*"\n"
     for atom in comp.atoms
         str = str*atom*"\n"
     end
@@ -176,7 +189,7 @@ function writecomponent(filename, comp)
     end
     str = str*string(comp.Mr)
     
-    filename = lowercase(filename)   
+    filename = endswith(filename, ".comp") ? filename : filename * ".comp"   
     open(filename, "w") do io
         write(io, str)
     end
@@ -197,22 +210,21 @@ function readcomponent(filename)
     lines = readlines(f)
     close(f)
 
-    name = lines[1]
-    count = parse(Int, lines[2])
+    count = parse(Int, lines[1])
 
     atoms = Vector{String}(undef, count)
     for i in 1:count
-        atoms[i] = lines[i+2]
+        atoms[i] = lines[i+1]
     end
 
     counts = Vector{Int}(undef, count)
     for i in 1:count
-        counts[i] = parse(Int, lines[i+2+count])
+        counts[i] = parse(Int, lines[i+1+count])
     end
 
     Mr = parse(Float64, lines[end])
 
-    return Component(name, atoms, counts, Mr)
+    return Component(filename, atoms, counts, Mr)
 end
 
 
@@ -233,7 +245,7 @@ function readcomponentlist!(fs, foldername, filenames)
     
     for fn in filenames
         fname = fn * ".comp"
-        if lowercase(fname) in available
+        if fname in available
             fs.comps[fn] = readcomponent(joinpath(foldername, fname))
             count += 1
         else

@@ -57,6 +57,17 @@ fs.comps["Ethylene"]
     N --> 2
 end "Nitrogen" fs
 
+# You can also pass a Symbol, which will the converted to a `String` and used as the name of the component.
+@comp begin
+    N --> 2
+end :Nitrogen2 fs
+
+# And you can interpolate variables' values into the name of the component.
+mycompname = "Nitrogen"
+@comp begin
+    N --> 2
+end "$(mycompname)3" fs
+
 # And we can check that is was added to our flowsheet:
 
 fs.comps
@@ -91,6 +102,8 @@ fs.comps
 
 # We can delete these components again:
 
+deletecomponent!(fs, "Nitrogen2")
+deletecomponent!(fs, "Nitrogen3")
 deletecomponent!(fs, "CH4")
 for n in 2:10
     name = "C$(n)H$(2n+2)"
@@ -178,13 +191,11 @@ fs.streams["Feed"]
 # In the data files (*.csv), we had columns of data for ethylene, ethane and hydrogen, but our list of components also includes nitrogen.
 # We automatically set zero flows for amy components not in the file, so all the streams contain all of the components (for our continued sanity...).
 
-# We can still add components to the component list after the streams were created. If we do, then we should also call `refreshcomplist(fs)` to add zero flows for all of these new components to the existing streams in the stream list.
+# We can still add components to the component list after the streams were created. If we do, then zero flows for all of these new components are added to the existing streams in the stream list.
     
 @comp begin
     Ar --> 1
 end "Argon" fs
-
-refreshcomplist(fs)
 
 fs.streams["Feed"]
 
@@ -399,9 +410,7 @@ fs.runorder
 
 # Defining a flowsheet with a lot of streams and unitoperations can be confusing. To help you keep track of everything, you can generate a block flow diagram of your flowsheet:
 
-#nb generateBFD(fs, "./myflowsheet.png") # Or .svg
-#jl generateBFD(fs, "./myflowsheet.svg")
-generateBFD(fs, "./myflowsheet.svg") #src
+generateBFD(fs, "./myflowsheet.svg")
 
 
 # ## Mass balance boundaries
@@ -652,9 +661,8 @@ fs.unitops["Reactor2"]()
 
 # We can do a quick check on our flowsheet:
 
-#nb generateBFD(fs, "./myflowsheet2.png") # Or .svg
-#jl generateBFD(fs, "./myflowsheet2.svg")
-generateBFD(fs, "./myflowsheet2.svg") #src
+
+generateBFD(fs, "./myflowsheet2.svg")
 
 # Now let's introduce a measurement error in the 'Mixed' stream:
 

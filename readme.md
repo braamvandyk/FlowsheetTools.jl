@@ -20,7 +20,8 @@ file shows the current capabilities. TODO.md lists the things I currently want t
 ## The backstory
 
 The project started off as an exercise in metaprogramming, which resulted in the macros to define
-components, and then later streams. And then the thing grew a life of its own.
+components, and then later streams. And then the thing grew a life of its own. I'm still no good at
+metaprogramming, so anyone who wants to improve the macros would be very welcome!
 
 The vision was to build a basic toolkit to define flowsheets in order to calculate KPIs
 and reconcile mass balances. This is mostly there, expect that the mass balance reconciliation

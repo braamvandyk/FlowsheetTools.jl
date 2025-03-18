@@ -4,14 +4,26 @@
 #
 #----------------------------------------------------------------------------
 
-struct Flowsheet
-    comps::ComponentList
+mutable struct Flowsheet
+    comps::Union{Nothing, ComponentList} #ComponentList
     streams::StreamList
     unitops::UnitOpList
     boundaries::BoundaryList
 
     rununits::Vector{String}
     runorder::Vector{Int}
+
+    function Flowsheet()
+        streamlist = StreamList()
+        unitlist = UnitOpList()
+        boundarylist = BoundaryList()
+
+        fs = new(nothing, streamlist, unitlist, boundarylist, String[], Int[])
+        complist = ComponentList(fs)
+        fs.comps = complist
+    
+        return fs
+    end
 end
 
 
@@ -26,7 +38,7 @@ function (fs::Flowsheet)(neworder = nothing; showoutput=true)
         end
     else
         @argcheck length(neworder) == length(fs.rununits) "neworder must have same length as rununits"
-        for i in 1:length(fs.rununits)
+        for i in 1:length(neworder)
             idx = findfirst(==(i), neworder)
             showoutput && println(i, "  ", fs.unitops[fs.rununits[idx]].name)
             fs.unitops[fs.rununits[idx]]()
@@ -44,14 +56,7 @@ end
 #----------------------------------------------------------------------------
 
 
-function Flowsheet()
-    complist = ComponentList()
-    streamlist = StreamList()
-    unitlist = UnitOpList()
-    boundarylist = BoundaryList()
 
-    return Flowsheet(complist, streamlist, unitlist, boundarylist, String[], Int[])
-end
 
 
 #----------------------------------------------------------------------------

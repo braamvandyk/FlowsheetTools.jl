@@ -56,13 +56,18 @@ expidite the addition of streams using the internal TimeArray objects.
 It is recommended to rather create StreamHistory objects via readstreamhistory().
 
 """
-function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
+function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)   
+    if length(timestamps) > 1
+        _flowdata = flowdata
+    else
+        _flowdata = reshape(flowdata, (1, length(flowdata))) # Ensure a 2D array for flowdata
+    end
+    numdata = size(_flowdata, 1)
     numcomps = length(comps)
-    numdata = size(flowdata, 1)
-
     
+
     # Sanity checks on the data
-    size(flowdata, 2) != numcomps && throw(DimensionMismatch("mismatch between number of components and available data."))
+    size(_flowdata, 2) != numcomps && throw(DimensionMismatch("mismatch between number of components and available data."))
     length(timestamps) != numdata && throw(DimensionMismatch("length mismatch between data and timestamps."))
     
     # Build the TimeArrays
@@ -99,11 +104,11 @@ function Stream(name, complist, comps, timestamps, flowdata, ismoleflow=false)
                 idx = findfirst(x->x==compname, comps)
 
                 if !ismoleflow
-                    massflows[datum, i] = flowdata[datum, idx]
-                    moleflows[datum, i] = flowdata[datum, idx]/comp.Mr
+                    massflows[datum, i] = _flowdata[datum, idx]
+                    moleflows[datum, i] = _flowdata[datum, idx]/comp.Mr
                 else
-                    moleflows[datum, i] = flowdata[datum, idx]
-                    massflows[datum, i] = flowdata[datum, idx]*comp.Mr
+                    moleflows[datum, i] = _flowdata[datum, idx]
+                    massflows[datum, i] = _flowdata[datum, idx]*comp.Mr
                 end
 
                 totalmassflows[datum] += massflows[datum, i]
