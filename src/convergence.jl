@@ -1,6 +1,6 @@
 using FlowsheetTools
 using Graphs
-using GraphMakie, GLMakie
+using GraphMakie, CairoMakie
 
 
 
@@ -47,7 +47,7 @@ end "RecycleSplitter" fs
 
 fs()
 
-generateBFD(fs, "./teartest.svg")
+# generateBFD(fs, "./teartest.svg")
 
 
 # --------------------------------
@@ -119,7 +119,7 @@ function generate_graph(fs::Flowsheet, returnlabels=false)
 
     #TODO Remove the plotting stuff after debugging is over??
     if returnlabels
-        return graph, nodenames, edgenames, edgetolabel
+        return graph, nodenames, edgetolabel
     else
         return graph
     end
@@ -127,6 +127,14 @@ end
 
 #TODO Remove the plotting stuff after debugging is over??
 function plot_graph(fs::Flowsheet)
-    graph, nodenames, edgenames, edgetolabel = generate_graph(fs)
-    graphplot(graph, nlabels=nodenames, elabels=[edgetolabel[e] for e in edges(graph)])
+    graph, nodenames, edgetolabel = generate_graph(fs, true)
+    gplt = graphplot(graph, nlabels=nodenames, elabels=[edgetolabel[e] for e in edges(graph)])
+    display(gplt)
 end
+
+inc_matrix, _, _ = incidence_matrix(fs);
+inc_matrix
+
+plot_graph(fs)
+g = generate_graph(fs)
+simplecycles(g)
