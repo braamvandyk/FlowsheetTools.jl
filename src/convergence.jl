@@ -87,9 +87,6 @@ end "D" fs
     outlets --> ["5"]
 end "E" fs
 
-fs()
-
-# generateBFD(fs, "./teartest.svg")
 
 
 # --------------------------------
@@ -173,14 +170,6 @@ function graph_from_incidence_matrix(incmtx, nodenames, edgenames, returnlabels=
     end
 end
 
-<<<<<<< HEAD
-#TODO Remove the plotting stuff after debugging is over??
-function plot_graph(fs::Flowsheet)
-    graph, nodenames, edgetolabel = generate_graph(fs, true)
-    fig, ax, plt = graphplot(graph, nlabels=nodenames, elabels=[edgetolabel[e] for e in edges(graph)], nodecolor=:blue, edgelabelcolor=:black, nodefontsize=10, edgestrokewidth=0.5)
-    hidedecorations!(ax); hidespines!(ax)
-    display(fig)
-=======
 
 function expand_incidence_matrix(inc_matrix)
 
@@ -213,7 +202,6 @@ function expand_incidence_matrix(inc_matrix)
     end     
         
     return newmatrix, unitlabels
->>>>>>> b7184600d80ebd69024751185849e83b8dc2a2d3
 end
 
 
