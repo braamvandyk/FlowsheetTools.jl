@@ -128,8 +128,9 @@ end
 #TODO Remove the plotting stuff after debugging is over??
 function plot_graph(fs::Flowsheet)
     graph, nodenames, edgetolabel = generate_graph(fs, true)
-    gplt = graphplot(graph, nlabels=nodenames, elabels=[edgetolabel[e] for e in edges(graph)])
-    display(gplt)
+    fig, ax, plt = graphplot(graph, nlabels=nodenames, elabels=[edgetolabel[e] for e in edges(graph)], nodecolor=:blue, edgelabelcolor=:black, nodefontsize=10, edgestrokewidth=0.5)
+    hidedecorations!(ax); hidespines!(ax)
+    display(fig)
 end
 
 inc_matrix, _, _ = incidence_matrix(fs);
