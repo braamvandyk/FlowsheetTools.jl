@@ -477,9 +477,10 @@ deletestreams!(fs)
 # Remember however that all streams contain all components, so deleting any component will cascade into deleting all streams, unit operations and boundaries as well!
 
 
-readstreamhistory!(fs, "C2", joinpath("streamhistories", "C2.csv"); ismoleflow=true)
-readstreamhistory!(fs, "H2", joinpath("streamhistories", "Hydrogen.csv"); ismoleflow=true)
-readstreamhistory!(fs, "Product", joinpath("streamhistories", "Product.csv"); ismoleflow=true)
+# readstreamhistory!(fs, "C2", joinpath("streamhistories", "C2.csv"); ismoleflow=true)
+# readstreamhistory!(fs, "H2", joinpath("streamhistories", "Hydrogen.csv"); ismoleflow=true)
+# readstreamhistory!(fs, "Product", joinpath("streamhistories", "Product.csv"); ismoleflow=true)
+readstreamlist!(fs, "streamhistories", ["C2", "H2", "Product"], ["C2.csv", "Hydrogen.csv", "Product.csv"], [true, true, true])
 addemptystream!(fs, "Mixed");
 addemptystream!(fs, "Product1");
 addemptystream!(fs, "Product1a");

@@ -1,0 +1,81 @@
+# Demo flowsheet configuration file
+
+title = "Demo Flowsheet"
+
+[comps]
+folder = "components"
+names = ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"]
+
+
+[streams]
+[streams.readfromfile]
+folder = "streamhistories"
+names = ["C2", "H2", "Product"]
+filenames = ["C2.csv", "Hydrogen.csv", "Product.csv"]
+ismoleflow = [true, true, true]
+
+[streams.emptystreams]
+names = [
+    "Mixed",
+    "Product1",
+    "Product1a",
+    "Product1b",
+    "Product2",
+    "Product3",
+    "Product4"
+]
+
+[streams.fixedstreams]
+names = ["Dummy"]
+
+[streams.fixedstreams.Dummy]
+ismoleflow = false
+flows = [10.0, 0.0, 0.0, 0.0, 0.1]
+
+[reactions]
+names = ["EthyleneHydrogenation"]
+
+[reactions.EthyleneHydrogenation]
+reactants = ["Ethylene", "Hydrogen"]
+products = ["Ethane"]
+reactantcoefficients = [1.0, 1.0]
+productcoefficients = [1.0]
+limitingreactant = "Ethylene"
+
+
+[unitops]
+names = ["Mixer", "Reactor", "ProductSplitter", "ComponentSplitter", "Mixer2"]
+
+[unitops.Mixer]
+inlets = ["C2", "H2"]
+outlets = ["Mixed"]
+calc = "mixer!"
+
+[unitops.Reactor]
+inlets = ["Mixed"]
+outlets = ["Product"]
+
+[unitops.ProductSplitter]
+inlets = ["Product"]
+outlets = ["Product1", "Product2"]
+calc = "flowsplitter!"
+params = [0.5]
+
+[unitops.ComponentSplitter]
+inlets = ["Product1"]
+outlets = ["Product1a", "Product1b"]
+calc = "componentplitter!"
+params.Hydrogen.Product1a = 0.5
+params.Ethane.Product1b = 0.3 
+
+[unitops.Mixer2]
+inlets = ["Product1a", "Product1b", "Product2"]
+outlets = ["Product3"]
+calc = "mixer!"
+
+[unitops.Reactor2]
+inlets = ["Product3"]
+outlets = ["Product4"]
+calc = "stoichiometric_reactor!"
+params.reactions = ["EthyleneHydrogenation"]
+conversion = 0.5

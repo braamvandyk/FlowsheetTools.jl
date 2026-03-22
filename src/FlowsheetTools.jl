@@ -10,7 +10,7 @@ module FlowsheetTools
 
 export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, deletecomponent!, deletecomponents!,
         Stream, StreamList, @stream, copystream!, deletestream!, renamestream!, addemptystream!, addfixedstream!,
-            readstreamhistory!, writestreamhistory, writestreamhistories, refreshcomplist, deletestream!, deletestreams!,
+            readstreamhistory!, readstreamlist!, writestreamhistory, writestreamhistories, refreshcomplist, deletestream!, deletestreams!,
         UnitOp, UnitOpList, @unitop, mixer!, flowsplitter!, componentplitter!, Reaction, stoichiometric_reactor!,
             deleteunitop!, deleteunitops!,
         BalanceBoundary, BoundaryList, @boundary, showdata, deleteboundary!, deleteboundaries!,
