@@ -9,8 +9,8 @@ names = ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"]
 
 [streams]
 [streams.readfromfile]
-folder = "streamhistories"
 names = ["C2", "H2", "Product"]
+folder = "streamhistories"
 filenames = ["C2.csv", "Hydrogen.csv", "Product.csv"]
 ismoleflow = [true, true, true]
 
@@ -79,3 +79,13 @@ outlets = ["Product4"]
 calc = "stoichiometric_reactor!"
 params.reactions = ["EthyleneHydrogenation"]
 conversion = 0.5
+
+[boundaries]
+
+names = ["B1", "B2"]
+
+[boundaries.B1]
+unitops = ["Mixer"]
+
+[boundaries.B2]
+unitops = ["Reactor", "ProductSplitter"]

@@ -1,5 +1,5 @@
 using FlowsheetTools
-using TOML  
+using TOML
 
 function readconfig(filename)
     filedata = read(filename, String)
@@ -7,7 +7,7 @@ function readconfig(filename)
     return config
 end
 
-# function generate_flowsheet(config)
+function generate_flowsheet(config)
     fs = Flowsheet()
 
     # Read components
@@ -51,7 +51,7 @@ end
         productcoeffs = config["reactions"][name]["productcoefficients"]
         limiting = config["reactions"][name]["limitingreactant"]
 
-        @eval $(sname)(frac) = Reaction($fs, $reactants, $products, $reactantcoeffs, $productcoeffs, $limiting, frac)
+        @eval $(sname)(frac) = Reaction(esc($fs), $reactants, $products, $reactantcoeffs, $productcoeffs, $limiting, frac)
     end
 
     unitopnames = config["unitops"]["names"]
@@ -72,14 +72,26 @@ end
         end
             
         if isnothing(calc)
-            @eval fs.unitops[$name] = UnitOp($name, $(fs).streams, $inlets, $outlets)
+            fs.unitops[name] = UnitOp(name, fs.streams, inlets, outlets)
             FlowsheetTools.addtorun!(fs, name)
         else
-            @eval fs.unitops[$name] = UnitOp($name, $(fs).streams, $inlets, $outlets, $calc, $params)
+            @eval $fs.unitops[$name] = UnitOp($name, $fs.streams, $inlets, $outlets, $calc, $params)
             FlowsheetTools.addtorun!(fs, name)
         end
     end
-# end
+
+    # Execute all unitops before adding the boundaries, so streams are populated first
+    fs()
+
+    boundarynames = config["boundaries"]["names"]
+    for name in boundarynames
+        unitopnames = config["boundaries"][name]["unitops"]
+        fs.boundaries[name] = BalanceBoundary(name, fs.unitops, unitopnames)
+    end
+
+    return fs
+end
 
 filename = "./testflowsheet.toml"
 config = readconfig(filename)
+fs = generate_flowsheet(config)
