@@ -1,6 +1,6 @@
 using Dates, Loess, Interpolations, Missings, TimeSeries, Statistics
 
-# # These are used only during testing
+# These are used only during testing
 using Plots, Distributions
 
 """

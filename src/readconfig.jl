@@ -11,12 +11,20 @@ function generate_flowsheet(config)
     fs = Flowsheet()
 
     # Read components
-    compsfolder = config["comps"]["folder"]
-    compnames = config["comps"]["names"]
+    compsfolder = config["comps"]["readfromfile"]["folder"]
+    compnames = config["comps"]["readfromfile"]["names"]
     if length(compnames) > 0
         count = readcomponentlist!(fs, compsfolder, compnames)
     end
     
+    # Define new components
+    compsnames = config["comps"]["define"]["names"]
+    for name in compsnames
+        atoms = config["comps"]["define"][name]["atoms"]
+        counts = config["comps"]["define"][name]["counts"]
+        fs.comps[name] = Component(name, atoms, counts)
+    end
+
     # Read stream histories
     streamfolder = config["streams"]["readfromfile"]["folder"]
     streamnames = config["streams"]["readfromfile"]["names"]
@@ -94,4 +102,10 @@ end
 
 filename = "./testflowsheet.toml"
 config = readconfig(filename)
-fs = generate_flowsheet(config)
+myfs = generate_flowsheet(config)
+
+# New functionality - when a new component is added afterwards, both streams and boundaries are updated automatically
+myfs.comps["Dodecane"] = Component("Dodecane", ["C", "H"], [10, 22])
+myfs.comps
+myfs.streams["C2"]
+myfs.boundaries["B1"]

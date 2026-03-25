@@ -13,7 +13,7 @@ export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, del
             readstreamhistory!, readstreamlist!, writestreamhistory, writestreamhistories, refreshcomplist, deletestream!, deletestreams!,
         UnitOp, UnitOpList, @unitop, mixer!, flowsplitter!, componentplitter!, Reaction, stoichiometric_reactor!,
             deleteunitop!, deleteunitops!,
-        BalanceBoundary, BoundaryList, @boundary, showdata, deleteboundary!, deleteboundaries!,
+        BalanceBoundary, BoundaryList, @boundary, showdata, deleteboundary!, deleteboundaries!, refreshboundaries!,
         calccorrections, calccorrections_anchor, closemb!,
         conversion, molar_selectivity,
         Flowsheet, addunitop!, setorder!, generateBFD, componentnames,

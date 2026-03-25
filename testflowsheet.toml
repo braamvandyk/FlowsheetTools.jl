@@ -3,11 +3,21 @@
 title = "Demo Flowsheet"
 
 [comps]
+
+[comps.readfromfile]
 folder = "components"
-names = ["Ethylene", "Ethane", "Hydrogen", "Nitrogen", "Argon"]
+names = ["Ethylene", "Ethane", "Hydrogen", "Nitrogen"]
+
+[comps.define]
+names = ["Argon"]
+
+[comps.define.Argon]
+atoms = ["Ar"]
+counts = [1]
 
 
 [streams]
+
 [streams.readfromfile]
 names = ["C2", "H2", "Product"]
 folder = "streamhistories"
@@ -32,7 +42,9 @@ names = ["Dummy"]
 ismoleflow = false
 flows = [10.0, 0.0, 0.0, 0.0, 0.1]
 
+
 [reactions]
+
 names = ["EthyleneHydrogenation"]
 
 [reactions.EthyleneHydrogenation]
@@ -44,6 +56,7 @@ limitingreactant = "Ethylene"
 
 
 [unitops]
+
 names = ["Mixer", "Reactor", "ProductSplitter", "ComponentSplitter", "Mixer2"]
 
 [unitops.Mixer]

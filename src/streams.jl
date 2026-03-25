@@ -661,5 +661,8 @@ function refreshcomplist(fs)
 
         fs.streams[name] = Stream(name, complist, comps, timestamps, flowdata)
     end
+
+    # Now that the streams have been updated, we should also update the boundaries
+    refreshboundaries!(fs)
 end
 
