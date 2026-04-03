@@ -111,3 +111,67 @@ function molar_selectivity(b::BalanceBoundary, reactant::String, product::String
 
     return selectivities
 end
+
+
+"""
+
+    molar_selectivity_Cn_plus(b, reactant, n)
+
+Calculate the molar selectivity of the converted reactant to product with carbon number n and higher, over the balance boundary (b).
+Since the calculation does not know about actual reactions, it calculates Δproducts / Δreactant.
+Results are returned for each timestamp in the streams.
+
+Example
+    molar_selectivity_Cn_plus(fs.boundaries["B1"], "CO", 10
+
+"""
+# function molar_selectivity_Cn_plus(b::BalanceBoundary, reactant::String, product::String)
+#     # Find the reactant inflow
+#     if reactant in keys(b.total_in.comps.list)
+#         r_ins = values(b.total_in.moleflows[Symbol(reactant)])
+#     else
+#         r_ins = zeros(length(b.total_in.moleflows))
+#     end
+
+#     # Find the reactant outflow
+#     if reactant in keys(b.total_out.comps.list)
+#         r_outs = values(b.total_out.moleflows[Symbol(reactant)])
+#     else
+#         r_ins = zeros(length(b.total_out.moleflows))
+#     end
+
+#     # Find the product outflows
+#     for (comp, compdata) in b.total_out.comps.list
+#         if compdata.elements[1] >= n
+#             if product in keys(b.total_out.comps.list)
+#                 p_outs = values(b.total_out.moleflows[Symbol(comp)])
+#             else
+#                 p_ins = zeros(length(b.total_out.moleflows))
+#             end
+#         end
+#     end
+#     if product in keys(b.total_out.comps.list)
+#         p_outs = values(b.total_out.moleflows[Symbol(product)])
+#     else
+#         p_ins = zeros(length(b.total_out.moleflows))
+#     end
+
+#     selectivities = zeros(length(b.total_in.massflows))
+#     for (i, (r_in, r_out, p_in, p_out)) in enumerate(zip(r_ins, r_outs, p_ins, p_outs))
+#         if r_in > 0.0
+#             selectivities[i] = (p_out - p_in)/(r_in - r_out)
+#         else
+#             selectivities[i] = 0.0
+#         end
+#     end
+
+#     if length(selectivities) == 1
+#         return selectivities[1]
+#     else
+#         timestamps = timestamp(b.total_in.massflows)
+#         selectivities_ta = TimeArray(timestamps, selectivities, [Symbol("Molar selectivity: " * reactant * " -> " * product)])
+#         return selectivities_ta
+#     end
+
+#     return selectivities
+# end
