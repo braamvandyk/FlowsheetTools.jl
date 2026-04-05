@@ -1,7 +1,7 @@
 name = "FlowsheetTools"
 uuid = "f8a53a3c-89eb-4a52-9177-c81fa5c2770b"
-authors = ["Braam van Dyk <braam.vandyk@gmail.com> and contributors"]
 version = "0.1.0"
+authors = ["Braam van Dyk <braam.vandyk@gmail.com> and contributors"]
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
@@ -28,6 +28,7 @@ TimeSeries = "9e3dc215-6440-5c97-bce1-76c03772f85e"
 [compat]
 ArgCheck = "2"
 CairoMakie = "0.13.2"
+Dates = "1.11.0"
 DelimitedFiles = "1"
 Downloads = "1"
 ForwardDiff = "1.0.1"

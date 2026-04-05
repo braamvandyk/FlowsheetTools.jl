@@ -1,7 +1,7 @@
 using Dates, Loess, Interpolations, Missings, TimeSeries, Statistics
 
 # These are used only during testing
-using Plots, Distributions
+# using Plots, Distributions
 
 """
     calcHoL(timestamps)
@@ -17,46 +17,50 @@ end
 
 
 # Generate dummy data for testing
-function gendata(timestamps, period, fracfilled, fracdouble)
-    # We use HoL since we need the x-axis to run from 0.0
-    # The timestamps are also converted into a Float64 with hours since start
-    HoL = calcHoL(timestamps)
-    basedata = zeros(Float64, length(times))
-    data = zeros(Union{Float64, Missing}, length(times))
+# function gendata(timestamps, period, fracfilled, fracdouble)
+#     # We use HoL since we need the x-axis to run from 0.0
+#     # The timestamps are also converted into a Float64 with hours since start
+#     HoL = calcHoL(timestamps)
+#     basedata = zeros(Float64, length(times))
+#     data = zeros(Union{Float64, Missing}, length(times))
 
-    for i in eachindex(HoL)
-        basedata[i] = sin(π*period*(HoL[i]/(Hour(endtime - starttime)/Hour(1))))
-        norm = Normal(0, 0.2*abs(basedata[i]))
-        data[i] = basedata[i] + rand(norm)
-    end
+#     for i in eachindex(HoL)
+#         basedata[i] = sin(π*period*(HoL[i]/(Hour(endtime - starttime)/Hour(1))))
+#         norm = Normal(0, 0.2*abs(basedata[i]))
+#         data[i] = basedata[i] + rand(norm)
+#     end
 
-    len = length(data)
-    totalmissing = round(Int, (1 - fracfilled)*len)
+#     len = length(data)
+#     totalmissing = round(Int, (1 - fracfilled)*len)
 
-    # Add missing data
-    nummissing = 0
-    numdouble = 0
+#     # Add missing data
+#     nummissing = 0
+#     numdouble = 0
 
-    while nummissing < totalmissing
-        idx = rand(1:len)
-        if ismissing(data[idx])
-            continue
-        end
-        data[idx] = missing
-        nummissing += 1
-        if idx < len && rand() < fracdouble
-            data[idx+1] = missing            
-            numdouble += 1
-        end
-    end
+#     while nummissing < totalmissing
+#         idx = rand(1:len)
+#         if ismissing(data[idx])
+#             continue
+#         end
+#         data[idx] = missing
+#         nummissing += 1
+#         if idx < len && rand() < fracdouble
+#             data[idx+1] = missing            
+#             numdouble += 1
+#         end
+#     end
     
-    return data, basedata
+#     return data, basedata
+# end
+
+@enum FillMethod begin
+    Default
+    Denoise
+    FullSmooth
 end
 
-
-
 """
-    filldata(raw; allsmoothed=false, denoise=false, threshold = 2, α=0.3, 
+    filldata(raw; method=Default, threshold = 2, α=0.3, 
         suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
 
 Fill a time series using LOESS with suggested start and end values or linear extrapolations.
@@ -64,11 +68,11 @@ If `suggest_start = true`, the values in `startvals` will be used as the start v
 If `suggest_end = true`, the values in `endvals` will be used as the end values, if these are missing.
 If start or end values are missing and suggested values not supplied, linear extrapolation is used to fill them.
 
-If `denoise` is true, datapoints will be replaced with the smoothed value when `abs(smoothed - original) > sensitivity * abs(smoothed)`.
-If `allsmoothed` is true, all values are smoothed using LOESS, otherwise only missings are filled.
-
+If method == Default, only missing values are filled.
+If method == Denoise, only values that are significantly different from the smoothed value are replaced with the smoothed value, where significant is defined as `abs(smoothed - original) > threshold * std(data - smoothed)`.
+If method == FullSmooth, all values are smoothed using LOESS
 """
-function filldata(raw; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
+function filldata(raw; method=Default, threshold = 2, α=0.3, 
     suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
 
     HoL = calcHoL(timestamp(raw))
@@ -108,6 +112,18 @@ function filldata(raw; fullsmooth=false, denoise=false, threshold = 2, α=0.3,
         
         fulldata[:, i] .= predict(model, HoL)
 
+        if method == Default
+            fullsmooth = false
+            denoise = false
+        elseif method == Denoise
+            fullsmooth = false
+            denoise = true
+        elseif method == FullSmooth
+            fullsmooth = true
+            denoise = false
+        end
+
+
         if fullsmooth
             data[:, i] .= fulldata[:, i]
         else
@@ -127,7 +143,7 @@ function filldata(raw; fullsmooth=false, denoise=false, threshold = 2, α=0.3,
 end
 
 
-# Generate dummy data with missing values
+# # Generate dummy data with missing values
 # starttime = DateTime(2023, 1, 1, 0, 0)
 # endtime = DateTime(2023, 1, 12, 24, 0)
 # times = starttime:Hour(6):endtime
@@ -155,24 +171,24 @@ end
 # sf6 = filldata(raw, fullsmooth = true, α=0.5, suggest_start=true, suggest_end=true, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
 # rename!(sf6, [:fullsmooth05])
 
-# alldata = TimeSeries.merge(raw, sf1, sf2, sf3, sf4, sf5, sf6)
+# alldata = TimeSeries.merge(sf1, sf2, sf3, sf4, sf5, sf6, method=:left)
 
 # # https://stats.lse.ac.uk/fryzlewicz/wbs/wbs.pdf
 
-# # begin
-# #     scatter(raw, ms=6, label="raw")
-# #     scatter!(sf1, label="default", marker=:square)
-# #     scatter!(sf2, label="denoise", marker=:diamond)
-# #     scatter!(sf3, label="allsmoothed", ms=2)
-# # end
+# begin
+#     scatter(raw, ms=6, label="raw")
+#     scatter!(sf1, label="default", marker=:square)
+#     scatter!(sf2, label="denoise", marker=:diamond)
+#     scatter!(sf3, label="allsmoothed", ms=2)
+# end
 
 # begin
-#     alldata = TimeSeries.merge(raw, sf1, sf2, sf3, sf4, sf5, sf6)
+#     alldata = TimeSeries.merge(sf1, sf2, sf3, sf4, sf5, sf6)
 #     l = @layout [a b c d;
 #                  e f g h]
 
 #     pltraw = let
-#         scatter(alldata[:raw], leg=:bottomleft, size=(640, 480));
+#         scatter(raw, leg=:bottomleft, size=(640, 480));
 #         plot!(pure[:pure])
 #     end;
 
