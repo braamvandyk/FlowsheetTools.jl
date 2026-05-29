@@ -15,7 +15,7 @@ export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, del
             deleteunitop!, deleteunitops!,
         BalanceBoundary, BoundaryList, @boundary, showdata, deleteboundary!, deleteboundaries!, refreshboundaries!,
         calccorrections, calccorrections_anchor, closemb!,
-        conversion, molar_selectivity,
+        conversion, molar_selectivity, molar_selectivity_Cn_plus,
         Flowsheet, addunitop!, setorder!, generateBFD, componentnames,
         members,
         filldata
@@ -56,6 +56,9 @@ import Base.==
 # Dicts for periodic table with atomic number => symbol => atomic mass
 include("Atoms.jl")
 using .Atoms
+
+include("DataCleaning.jl")
+using .DataCleaning
 
 include("prettyround.jl")
 include("components.jl")
