@@ -361,3 +361,20 @@ function deleteboundaries!(fs)
         delete!(fs.boundaries.list, name);
     end
 end
+
+
+"""
+
+    function refreshboundaries!(fs)
+
+Refresh all boundaries from the Flowsheet's BoundaryList for updated streams
+
+"""
+function refreshboundaries!(fs)
+    @argcheck fs isa Flowsheet "fs must be a Flowsheet"
+    
+    for name in keys(fs.boundaries.list)
+        included_units = copy(fs.boundaries[name].included_units)
+        fs.boundaries[name] = BalanceBoundary(name, fs.unitops, included_units)
+    end
+end

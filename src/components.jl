@@ -9,6 +9,7 @@ struct Component
     atoms::Vector{String}
     counts::Vector{Int}
     Mr::Float64
+    group::String
 end
 
 struct ComponentList
@@ -33,12 +34,12 @@ It is recommended to rather use the @comp macro to create components interactive
 The atoms are identified by their IUPAC symbols, as a `String`. Counts are integers.
 
 """
-function Component(name, atoms, counts)
+function Component(name, atoms, counts, group = "_no group_")
     Mr = 0.0
     for (i, atom) in enumerate(atoms)
         Mr += counts[i]*Atoms.atomweights[atom]
     end
-    return Component(string(name), atoms, counts, Mr)
+    return Component(string(name), atoms, counts, Mr, group)
 end
 
 
@@ -111,6 +112,9 @@ function Base.show(io::IO, c::Component)
     for (i, atom) in enumerate(c.atoms)
         println(io, "   ", rpad(atom,2), "\t\t", lpad(c.counts[i], 4))
     end
+    if !isnothing(c.group)
+        println(io, "\n  Group: ", c.group)
+    end
 end
 
 
@@ -134,12 +138,13 @@ end
     @comp begin
         C --> 2
         H --> 6
-    end "Ethane" fs
+    end "Ethane" fs "Paraffins" 
 
 Defines a Component with the specified name and atomic composition and add it to fs.comps, a ComponentList, inside fs::Flowsheet.
+Also defines an optional group for the component, which can be used for grouping components in KPIs.
 
 """
-macro comp(ex::Expr, name, fs::Symbol)      
+macro comp(ex::Expr, name, fs::Symbol, group::String="")      
     local atoms = String[]
     local counts = Int[]
 
@@ -160,7 +165,9 @@ macro comp(ex::Expr, name, fs::Symbol)
         end
     end
 
-    return :($(esc(fs)).comps[$(esc(name))] = Component($(esc(name)), $atoms, $counts))
+    group == "" && (group = "_no group_")
+        
+    return :($(esc(fs)).comps[$(esc(name))] = Component($(esc(name)), $atoms, $counts, $(esc(group))))
 end
 
 
@@ -179,16 +186,24 @@ Write a Component struct to a file.
 
 """
 function writecomponent(filename, comp)
-    # str = "$(comp.name)\n"
     str = string(length(comp.atoms))*"\n"
+
     for atom in comp.atoms
         str = str*atom*"\n"
     end
+
     for count in comp.counts
         str = str*string(count)*"\n"
     end
-    str = str*string(comp.Mr)
+
+    str = str*string(comp.Mr)*"\n"
     
+    if comp.group != ""
+        str = str*comp.group
+    else
+        str = str*"_no group_"
+    end
+
     filename = endswith(filename, ".comp") ? filename : filename * ".comp"   
     open(filename, "w") do io
         write(io, str)
@@ -222,9 +237,16 @@ function readcomponent(filename)
         counts[i] = parse(Int, lines[i+1+count])
     end
 
-    Mr = parse(Float64, lines[end])
+    Mr = parse(Float64, lines[1+2*count+1])
 
-    return Component(filename, atoms, counts, Mr)
+    if length(lines) > 1+2*count+1
+        group = lines[1+2*count+2]
+        group == "" && (group = "_no group_")
+    else
+        group = "_no group_"
+    end
+
+    return Component(filename, atoms, counts, Mr, group)
 end
 
 

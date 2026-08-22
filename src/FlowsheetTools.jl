@@ -5,19 +5,19 @@
 A basic flowsheeting solution for Julia to allow mass balance closure, as well as KPI evaluations on specified flowsheets mass balance boundaries.
 
 """
-
 module FlowsheetTools
 
 export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, deletecomponent!, deletecomponents!,
         Stream, StreamList, @stream, copystream!, deletestream!, renamestream!, addemptystream!, addfixedstream!,
-            readstreamhistory!, writestreamhistory, writestreamhistories, refreshcomplist, deletestream!, deletestreams!,
+            readstreamhistory!, readstreamlist!, writestreamhistory, writestreamhistories, refreshcomplist, deletestream!, deletestreams!,
         UnitOp, UnitOpList, @unitop, mixer!, flowsplitter!, componentplitter!, Reaction, stoichiometric_reactor!,
             deleteunitop!, deleteunitops!,
-        BalanceBoundary, BoundaryList, @boundary, showdata, deleteboundary!, deleteboundaries!,
+        BalanceBoundary, BoundaryList, @boundary, showdata, deleteboundary!, deleteboundaries!, refreshboundaries!,
         calccorrections, calccorrections_anchor, closemb!,
-        conversion, molar_selectivity,
+        conversion, molar_selectivity, molar_selectivity_Cn_plus,
         Flowsheet, addunitop!, setorder!, generateBFD, componentnames,
-        members
+        members,
+        filldata
 
 
 using ArgCheck,                 # Replace simple @asserts with ArgCheck
@@ -25,7 +25,7 @@ using ArgCheck,                 # Replace simple @asserts with ArgCheck
       Dates,                    # Used with all DateTime types
       DelimitedFiles,           # Used for reading stream histories
       Downloads,                # Used to pass Mermaid diagram definition to server
-      ForwardDiff,              # USed by Optim.jl in reconciliation
+      ForwardDiff,              # Used by Optim.jl in reconciliation
       HypothesisTests,          # Used for Unequal Variance t-test and Augmented Dickey-Fuller test to see if data has a slope between changepoints
       Interpolations,           # Used for extrapolation to endpoints in cleaning up data
       InvertedIndices,          # Used for dropping selected rows and columns from matrices
@@ -56,6 +56,9 @@ import Base.==
 include("Atoms.jl")
 using .Atoms
 
+include("DataCleaning.jl")
+using .DataCleaning
+
 include("prettyround.jl")
 include("components.jl")
 include("streams.jl")
@@ -64,6 +67,8 @@ include("boundaries.jl")
 include("kpis.jl")
 include("closure.jl")
 include("flowsheets.jl")
+include("datacleaning.jl")
+
 
 
 
