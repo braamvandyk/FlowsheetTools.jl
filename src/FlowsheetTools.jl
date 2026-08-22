@@ -5,7 +5,6 @@
 A basic flowsheeting solution for Julia to allow mass balance closure, as well as KPI evaluations on specified flowsheets mass balance boundaries.
 
 """
-
 module FlowsheetTools
 
 export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, deletecomponent!, deletecomponents!,
@@ -26,7 +25,7 @@ using ArgCheck,                 # Replace simple @asserts with ArgCheck
       Dates,                    # Used with all DateTime types
       DelimitedFiles,           # Used for reading stream histories
       Downloads,                # Used to pass Mermaid diagram definition to server
-      ForwardDiff,              # USed by Optim.jl in reconciliation
+      ForwardDiff,              # Used by Optim.jl in reconciliation
       HypothesisTests,          # Used for Unequal Variance t-test and Augmented Dickey-Fuller test to see if data has a slope between changepoints
       Interpolations,           # Used for extrapolation to endpoints in cleaning up data
       InvertedIndices,          # Used for dropping selected rows and columns from matrices
