@@ -588,6 +588,30 @@ end
 
 """
 
+     readstreamlist!(fs, folder, streamnames, filenames, ismoleflows)
+
+Reads in stream histories from files (CSV files) in a specified folder into the streams in fs.streams.
+
+The data should be in the format of TimeStamp (yyyy/mm/dd HH:MM) in first column,
+then each subsequent column holding a component's mass flows, with the heading the
+name of the component.
+
+**The names should match those in the specified component list that is passed to the function.**
+"""
+function readstreamlist!(fs, folder, streamnames, filenames, ismoleflows)
+    @assert length(streamnames) == length(filenames) == length(ismoleflows) "streamnames, filenames and ismoleflows must have the same length"
+
+    count = 0
+    for (i, name) in enumerate(streamnames)
+        filename = joinpath(folder, lowercase(filenames[i]))
+        readstreamhistory!(fs, name, filename, ismoleflow=ismoleflows[i])
+        count += 1
+    end
+    return count
+end
+
+"""
+
     writestreamhistory(filename, streamname)
 
 Writes in a stream history file (CSV file).
@@ -637,5 +661,8 @@ function refreshcomplist(fs)
 
         fs.streams[name] = Stream(name, complist, comps, timestamps, flowdata)
     end
+
+    # Now that the streams have been updated, we should also update the boundaries
+    refreshboundaries!(fs)
 end
 
