@@ -1,10 +1,6 @@
-module DataCleaning
-
-export filldata, FillMethod
+# # These are used only during testing
 using Dates, Loess, Interpolations, Missings, TimeSeries, Statistics
-
-# These are used only during testing
-# using Plots, Distributions
+using Plots, Distributions
 
 """
     calcHoL(timestamps)
@@ -37,8 +33,8 @@ If method == Default, only missing values are filled.
 If method == Denoise, only values that are significantly different from the smoothed value are replaced with the smoothed value, where significant is defined as `abs(smoothed - original) > threshold * std(smoothed - original)`.
 If method == FullSmooth, all values are smoothed using LOESS
 """
-function filldata(raw; method=Default, threshold = 2, α=0.3, 
-    startvals=Float64[], endvals=Float64[])
+function filldata(raw::TimeArray; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
+    suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
 
     HoL = calcHoL(timestamp(raw))
     fulldata = similar(values(raw))
@@ -108,52 +104,13 @@ function filldata(raw; method=Default, threshold = 2, α=0.3,
     return TimeArray(timestamp(raw), data, colnames(raw))
 end
 
+function filldata(raw::Stream, basis=:mass; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
+    suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
 
+    # if basis == :mass
 
-
-
-
-
-
-# Generate dummy data for testing
-function gendata(timestamps, period, fracfilled, fracdouble)
-    # We use HoL since we need the x-axis to run from 0.0
-    # The timestamps are also converted into a Float64 with hours since start
-    HoL = calcHoL(timestamps)
-    basedata = zeros(Float64, length(times))
-    data = zeros(Union{Float64, Missing}, length(times))
-
-    for i in eachindex(HoL)
-        basedata[i] = sin(π*period*(HoL[i]/(Hour(endtime - starttime)/Hour(1))))
-        norm = Normal(0, 0.2*abs(basedata[i]))
-        data[i] = basedata[i] + rand(norm)
-    end
-
-    len = length(data)
-    totalmissing = round(Int, (1 - fracfilled)*len)
-
-    # Add missing data
-    nummissing = 0
-    numdouble = 0
-
-    while nummissing < totalmissing
-        idx = rand(1:len)
-        if ismissing(data[idx])
-            continue
-        end
-        data[idx] = missing
-        nummissing += 1
-        if idx < len && rand() < fracdouble
-            data[idx+1] = missing            
-            numdouble += 1
-        end
-    end
-    
-    return data, basedata
 end
 
-
-# ------------- Testing and demo code for data cleaning functions --------------
 
 # # Generate dummy data with missing values
 # starttime = DateTime(2023, 1, 1, 0, 0)
