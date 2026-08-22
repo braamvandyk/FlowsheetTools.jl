@@ -576,6 +576,7 @@ function readstreamhistory!(fs, streamname, filename; ismoleflow=false)
 
     data, header = readdlm(lowercase(filename), ',', '\n', header=true)
     comps = string.(header[2:end]) # readdlm returns an array of AbstractStrings for some reason
+    data = sortslices(data, dims=1, lt=(x,y)->isless(x[1],y[1])) #sort by timestamps
     flows = data[:, 2:end]
     timestamps = DateTime.(data[:, 1], "yyyy/mm/dd HH:MM")
 

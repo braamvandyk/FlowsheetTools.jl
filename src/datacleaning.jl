@@ -1,6 +1,5 @@
-using Dates, Loess, Interpolations, Missings, TimeSeries, Statistics
-
 # # These are used only during testing
+using Dates, Loess, Interpolations, Missings, TimeSeries, Statistics
 using Plots, Distributions
 
 """
@@ -68,7 +67,7 @@ If `denoise` is true, datapoints will be replaced with the smoothed value when `
 If `allsmoothed` is true, all values are smoothed using LOESS, otherwise only missings are filled.
 
 """
-function filldata(raw; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
+function filldata(raw::TimeArray; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
     suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
 
     HoL = calcHoL(timestamp(raw))
@@ -126,8 +125,15 @@ function filldata(raw; fullsmooth=false, denoise=false, threshold = 2, α=0.3,
     return TimeArray(timestamp(raw), data, colnames(raw))
 end
 
+function filldata(raw::Stream, basis=:mass; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
+    suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
 
-# Generate dummy data with missing values
+    # if basis == :mass
+
+end
+
+
+# # Generate dummy data with missing values
 # starttime = DateTime(2023, 1, 1, 0, 0)
 # endtime = DateTime(2023, 1, 12, 24, 0)
 # times = starttime:Hour(6):endtime

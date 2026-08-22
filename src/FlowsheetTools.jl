@@ -17,7 +17,7 @@ export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, del
         calccorrections, calccorrections_anchor, closemb!,
         conversion, molar_selectivity,
         Flowsheet, addunitop!, setorder!, generateBFD, componentnames,
-        members
+        members,filldata
 
 
 using ArgCheck,                 # Replace simple @asserts with ArgCheck
@@ -63,6 +63,7 @@ include("boundaries.jl")
 include("kpis.jl")
 include("closure.jl")
 include("flowsheets.jl")
+include("datacleaning.jl")
 
 
 
@@ -70,7 +71,7 @@ include("flowsheets.jl")
 
     function members(a)
 
-Returns the names of the components. streams or mass balance boundaries in the `ComponentList`, `StreamList` or `BoundaryList`.
+Returns the names of the components, streams or mass balance boundaries in the `ComponentList`, `StreamList` or `BoundaryList`.
 
 julia> members(fs.comps)
 5-element Vector{String}:
