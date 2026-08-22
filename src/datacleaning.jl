@@ -1,6 +1,6 @@
 # # These are used only during testing
-using Dates, Loess, Interpolations, Missings, TimeSeries, Statistics
-using Plots, Distributions
+# using Dates, Loess, Interpolations, Missings, TimeSeries, Statistics
+# using Plots, Distributions
 
 """
     calcHoL(timestamps)
@@ -104,12 +104,22 @@ function filldata(raw::TimeArray; fullsmooth=false, denoise=false, threshold = 2
     return TimeArray(timestamp(raw), data, colnames(raw))
 end
 
-function filldata(raw::Stream, basis=:mass; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
-    suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
+# function filldata(rawstream::Stream, basis=:mass; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
+#     suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
 
-    # if basis == :mass
+#     if basis == :mass
+#         rawvals = values(rawstream.massflows)
+#         colnames = colnames(rawstream.massflows)
+#     else # basis == :mole
+#         rawvals = values(rawstream.moleflows)
+#         colnames = colnames(rawstream.moleflows)
+#     end
 
-end
+#     rawdata = TimeArray(timestamp(rawstream), rawvals, colnames)
+#     filled = filldata(rawdata; fullsmooth=fullsmooth, denoise=denoise, threshold=threshold, α=α, suggest_start=suggest_start, startvals=startvals,
+#         suggest_end=suggest_end, endvals=endvals)
+
+# end
 
 
 # # Generate dummy data with missing values
@@ -189,4 +199,4 @@ end
 # end
 # savefig("cleandemo.png")
 
-end # module
+# end # module

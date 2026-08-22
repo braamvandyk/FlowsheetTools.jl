@@ -1,5 +1,4 @@
 """
-
 ## FlowsheetTools
 
 A basic flowsheeting solution for Julia to allow mass balance closure, as well as KPI evaluations on specified flowsheets mass balance boundaries.
@@ -55,8 +54,8 @@ import Base.==
 include("Atoms.jl")
 using .Atoms
 
-include("DataCleaning.jl")
-using .DataCleaning
+# include("DataCleaning.jl")
+# using .DataCleaning
 
 include("prettyround.jl")
 include("components.jl")
@@ -66,7 +65,7 @@ include("boundaries.jl")
 include("kpis.jl")
 include("closure.jl")
 include("flowsheets.jl")
-include("datacleaning.jl")
+# include("datacleaning.jl")
 
 
 

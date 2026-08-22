@@ -272,16 +272,16 @@ function Base.show(io::IO, stream::Stream)
     println(io)
 
     if stream.numdata == 1
-        header = string.(colnames(stream.massflows))
-        pushfirst!(header, " ")
-        massflows = ["Mass flows " (values(stream.massflows))]
-        moleflows = ["Molar flows" (values(stream.moleflows))]
-        data = vcat(massflows, moleflows)
-        pretty_table(io, data, header = header)
+        column_labels = string.(colnames(stream.massflows))
+        row_labels = [" Mass flows ", "Mole flows"]
+        data = vcat(values(stream.massflows), values(stream.moleflows))
+        pretty_table(io, data; column_labels, row_labels)
+ 
         println(io)
         println(io, "Total mass flow: $(prettyround(values(stream.totalmassflow)[begin]))")
+ 
         println(io)
-        pretty_table(io, values(stream.atomflows)[1], header = ["Atom", "Molar flow"])
+        pretty_table(io, values(stream.atomflows)[1]; column_labels = ["Atom", "Molar flow"])
     else
         println(io, "Mass flows:")
         pretty_table(io, stream.massflows, display_size=(14, -1))
