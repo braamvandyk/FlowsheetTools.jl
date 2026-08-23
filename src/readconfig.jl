@@ -1,6 +1,3 @@
-using FlowsheetTools
-using TOML
-
 function readconfig(filename)
     filedata = read(filename, String)
     config = TOML.parse(filedata)
@@ -99,13 +96,3 @@ function generate_flowsheet(config)
 
     return fs
 end
-
-filename = "./testflowsheet.toml"
-config = readconfig(filename)
-myfs = generate_flowsheet(config)
-
-# New functionality - when a new component is added afterwards, both streams and boundaries are updated automatically
-myfs.comps["Dodecane"] = Component("Dodecane", ["C", "H"], [10, 22])
-myfs.comps
-myfs.streams["C2"]
-myfs.boundaries["B1"]

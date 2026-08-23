@@ -782,3 +782,125 @@ filldata!(inpath, outpath1)
 
 # Do a full smoothing of the data, replacing all values with the smoothed values. We also specify a threshold for the smoothing, and start and end values for each component flow.
 filldata!(inpath, outpath2; method=FullSmooth, threshold = 2, α=0.5, startvals=[0.0,30.0,2.2,0.0,0.0], endvals=[0.0,29.0,2.0,0.0,0.0])
+
+# ## Loading a flowsheet from a file
+# Instead of building up a flowsheet from scratch, we can also load a flowsheet from a file. This is useful if you have a flowsheet that you want to use as a template for other flowsheets, or if you want to save a flowsheet that you have built up and use it later.
+# This is currently a two-step process. First, we load the flowsheet from a file, and then we can use it to create a new flowsheet. The flowsheet is saved in a TOML format, which is human-readable and can be easily edited.
+
+# Example flowsheet:
+#
+#     # Demo flowsheet configuration file
+# 
+#     title = "Demo Flowsheet"
+#   
+#     [comps]
+#   
+#     [comps.readfromfile]
+#     folder = "components"
+#     names = ["Ethylene", "Ethane", "Hydrogen", "Nitrogen"]
+#   
+#     [comps.define]
+#     names = ["Argon"]
+#   
+#     [comps.define.Argon]
+#     atoms = ["Ar"]
+#     counts = [1]
+#   
+#   
+#     [streams]
+#   
+#     [streams.readfromfile]
+#     names = ["C2", "H2", "Product"]
+#     folder = "streamhistories"
+#     filenames = ["C2.csv", "Hydrogen.csv", "Product.csv"]
+#     ismoleflow = [true, true, true]
+#   
+#     [streams.emptystreams]
+#     names = [
+#         "Mixed",
+#         "Product1",
+#         "Product1a",
+#         "Product1b",
+#         "Product2",
+#         "Product3",
+#         "Product4"
+#     ]
+#   
+#     [streams.fixedstreams]
+#     names = ["Dummy"]
+#   
+#     [streams.fixedstreams.Dummy]
+#     ismoleflow = false
+#     flows = [10.0, 0.0, 0.0, 0.0, 0.1]
+#   
+#   
+#     [reactions]
+#   
+#     names = ["EthyleneHydrogenation"]
+#   
+#     [reactions.EthyleneHydrogenation]
+#     reactants = ["Ethylene", "Hydrogen"]
+#     products = ["Ethane"]
+#     reactantcoefficients = [1.0, 1.0]
+#     productcoefficients = [1.0]
+#     limitingreactant = "Ethylene"
+#   
+#   
+#     [unitops]
+#   
+#     names = ["Mixer", "Reactor", "ProductSplitter", "ComponentSplitter", "Mixer2"]
+#   
+#     [unitops.Mixer]
+#     inlets = ["C2", "H2"]
+#     outlets = ["Mixed"]
+#     calc = "mixer!"
+#   
+#     [unitops.Reactor]
+#     inlets = ["Mixed"]
+#     outlets = ["Product"]
+#   
+#     [unitops.ProductSplitter]
+#     inlets = ["Product"]
+#     outlets = ["Product1", "Product2"]
+#     calc = "flowsplitter!"
+#     params = [0.5]
+#   
+#     [unitops.ComponentSplitter]
+#     inlets = ["Product1"]
+#     outlets = ["Product1a", "Product1b"]
+#     calc = "componentplitter!"
+#     params.Hydrogen.Product1a = 0.5
+#     params.Ethane.Product1b = 0.3 
+#   
+#     [unitops.Mixer2]
+#     inlets = ["Product1a", "Product1b", "Product2"]
+#     outlets = ["Product3"]
+#     calc = "mixer!"
+#   
+#     [unitops.Reactor2]
+#     inlets = ["Product3"]
+#     outlets = ["Product4"]
+#     calc = "stoichiometric_reactor!"
+#     params.reactions = ["EthyleneHydrogenation"]
+#     conversion = 0.5
+#   
+#     [boundaries]
+#   
+#     names = ["B1", "B2"]
+#   
+#     [boundaries.B1]
+#     unitops = ["Mixer"]
+#   
+#     [boundaries.B2]
+#     unitops = ["Reactor", "ProductSplitter"]
+# 
+
+filename = "./testflowsheet.toml"
+config = readconfig(filename)
+myfs = generate_flowsheet(config)
+
+# Some new functionality added: when a new component is added afterwards, both streams and boundaries are updated automatically
+myfs.comps["Dodecane"] = Component("Dodecane", ["C", "H"], [10, 22])
+myfs.comps
+myfs.streams["C2"]
+myfs.boundaries["B1"]

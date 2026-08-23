@@ -20,6 +20,7 @@ Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 TimeSeries = "9e3dc215-6440-5c97-bce1-76c03772f85e"
 
 [compat]
@@ -38,6 +39,7 @@ Optim = "2"
 OrderedCollections = "2"
 PrettyTables = "3"
 Statistics = "1"
+TOML = "1.0.3"
 TimeSeries = "0.26"
 julia = "1"
 

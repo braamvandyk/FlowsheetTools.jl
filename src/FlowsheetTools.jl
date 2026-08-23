@@ -16,6 +16,7 @@ export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, del
             conversion, molar_selectivity, molar_selectivity_Cn_plus,
         Flowsheet, addunitop!, setorder!, generateBFD, componentnames,
         FillMethod, Default, Denoise, FullSmooth, filldata, filldata!,
+        readconfig, generate_flowsheet,
         members
 
 
@@ -36,7 +37,8 @@ using ArgCheck,                 # Replace simple @asserts with ArgCheck
       PrettyTables,             # Used for pretty printing
       # RowEchelon,               # Used for rref
       Statistics,               # Basic statistical functions
-      TimeSeries                # Used for TimeArray in Streams
+      TimeSeries,               # Used for TimeArray in Streams
+      TOML                     # Used for reading configuration files
 
 import Base.setindex!
 import Base.getindex
@@ -65,6 +67,7 @@ include("kpis.jl")
 include("closure.jl")
 include("flowsheets.jl")
 include("datacleaning.jl")
+include("readconfig.jl")
 
 
 
