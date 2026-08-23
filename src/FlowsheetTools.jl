@@ -15,7 +15,7 @@ export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, del
             calccorrections, calccorrections_anchor, closemb!,
             conversion, molar_selectivity, molar_selectivity_Cn_plus,
         Flowsheet, addunitop!, setorder!, generateBFD, componentnames,
-        FillMethod, Default, Denoise, FullSmooth, filldata,
+        FillMethod, Default, Denoise, FullSmooth, filldata, filldata!,
         members
 
 

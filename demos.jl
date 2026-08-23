@@ -176,8 +176,7 @@ fs.streams["Product"].moleflows
 #-
 fs.streams["Product"].atomflows
 
-# When we want to deal with streams with multiple historic data points, to analyse plant data, we can use the `readstreamhistory` function, to read the stream from a file.
-
+# When we want to deal with streams with multiple historic data points, to analyse plant data, we can use the `readstreamhistory` function, to read the stream from a file. Since real world data often has missing values, we can use the `filldata` function to fill in missing and smooth the noise. See later for more.
 # First, let's start with a new, empty stream list, to get rid of the streams we have created earlier. Note that `deletestreams!(fs)` will delete all the streams in the `Flowsheet`, deletestream(fs, name) will delete a single stream.
 
 deletestreams!(fs)
@@ -745,3 +744,30 @@ writestreamhistory(fs.streams["C2"], "corrected.csv")
 #jl showdata(fs.boundaries["B2"])
 #nb print(showdata(fs.boundaries["B2"]))
 print(showdata(fs.boundaries["B2"])) #src
+
+# ## Other utilities - filldata
+
+# In order to clean up data, we can use the `filldata` function to fill in missing values and smooth out noise. This is useful for real-world data that may have gaps or fluctuations. It works directly on a stream history file. The basic algorithm is to use linear interpolation to fill in missing values at the start and end of the time series, and then use a LOESS smoothing curve fill in the missing data. The function takes the path to the input file, the path to the output file, and optional parameters for the smoothing algorithm.
+
+# filldata(raw::TimeArray; method=Default, threshold = 2, α=0.3, startvals=Float64[], endvals=Float64[])
+# Values in `startvals`, if provided, will be used as the start values for each component flow, if these are missing.
+# Calues in `endvals`, if provided, will be used as the end values for each component flow, if these are missing.
+# If start or end values are missing and suggested values not supplied, linear extrapolation is used to fill them.
+
+# If method == Default, only missing values are filled.
+# If method == Denoise, only values that are significantly different from the smoothed value are replaced with the smoothed value, where significant is defined as
+#     abs(smoothed - original) > threshold * std(smoothed - original).
+# If method == FullSmooth, all values are smoothed using LOESS.
+
+infile = "missingstream.csv"
+outfile1 = "filledstream.csv"
+outfile2 = "smoothedstream.csv"
+inpath = joinpath("streamhistories", infile)
+outpath1 = joinpath("streamhistories", outfile1)
+outpath2 = joinpath("streamhistories", outfile2)
+
+# Only fill in the missing values
+filldata!(inpath, outpath1)
+
+# Do a full smoothing of the data, replacing all values with the smoothed values. We also specify a threshold for the smoothing, and start and end values for each component flow.
+filldata!(inpath, outpath2; method=FullSmooth, threshold = 2, α=0.5, startvals=[0.0,30.0,2.2,0.0,0.0], endvals=[0.0,29.0,2.0,0.0,0.0])
