@@ -62,3 +62,15 @@ you can with the available analyses.
 
 This is why the existing algorithm looks the way it does. Adding any other algorithm is of course not a problem,
 but also not a priority. If anyone feels they really need some other methods, PRs would be more than welcome.
+
+### Recently added features that need some more robust testing:
+
+#### Data clean-up
+A data cleaning method has been added with three methods and some adjustable parameters.
+This works directly on the stream history CSV files. There is also a function that takes a TimeArray as on input.
+This should be used BEFORE a stream is read in, which is why it works on the file, not the `Stream` object.
+
+#### Config files
+Since I have always intended the mass balance recon tool to site on a server at work somewhere, where people can submit jobs, I added config files.
+The config TOML file specifies the whole flowsheet, very similar to doing it via code. Currently the files for components and streams need to already be accessible.
+Any enterprising individual who already know how to create a server that runs Julia and can upload/return files, please reach out.
