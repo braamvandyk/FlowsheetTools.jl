@@ -749,15 +749,26 @@ print(showdata(fs.boundaries["B2"])) #src
 
 # In order to clean up data, we can use the `filldata` function to fill in missing values and smooth out noise. This is useful for real-world data that may have gaps or fluctuations. It works directly on a stream history file. The basic algorithm is to use linear interpolation to fill in missing values at the start and end of the time series, and then use a LOESS smoothing curve fill in the missing data. The function takes the path to the input file, the path to the output file, and optional parameters for the smoothing algorithm.
 
-# filldata(raw::TimeArray; method=Default, threshold = 2, α=0.3, startvals=Float64[], endvals=Float64[])
+#     filldata(raw::TimeArray; method=Default, threshold = 2, α=0.3, startvals=Float64[], endvals=Float64[])
+# 
 # Values in `startvals`, if provided, will be used as the start values for each component flow, if these are missing.
-# Calues in `endvals`, if provided, will be used as the end values for each component flow, if these are missing.
+#
+# Values in `endvals`, if provided, will be used as the end values for each component flow, if these are missing.
+#
 # If start or end values are missing and suggested values not supplied, linear extrapolation is used to fill them.
 
 # If method == Default, only missing values are filled.
-# If method == Denoise, only values that are significantly different from the smoothed value are replaced with the smoothed value, where significant is defined as
+#
+# If method == Denoise, missing values are filled and values that are significantly different from the smoothed value are replaced with the smoothed value, where significant is defined as:
+# 
 #     abs(smoothed - original) > threshold * std(smoothed - original).
+#
 # If method == FullSmooth, all values are smoothed using LOESS.
+
+# To see the effect of the parameters, refer to the image below. 'raw' is the noisy data with missing values, 'pure' is the ground truth data.
+# In each example, the series name refers to the method used (Default, Denoise, FullSmooth), and the smoothing parameter α. The start and end values were also specified for the FullSmooth example, to ensure that the smoothed data starts and ends at the correct values.
+
+# ![LOESS Smoothing](cleandemo.png)
 
 infile = "missingstream.csv"
 outfile1 = "filledstream.csv"

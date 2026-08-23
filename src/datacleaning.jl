@@ -22,11 +22,11 @@ end
 
 Fill a time series using LOESS with suggested start and end values or linear extrapolations.
 Values in `startvals`, if provided, will be used as the start values, if these are missing.
-Calues in `endvals`, if provided, will be used as the end values, if these are missing.
+Values in `endvals`, if provided, will be used as the end values, if these are missing.
 If start or end values are missing and suggested values not supplied, linear extrapolation is used to fill them.
 
 If method == Default, only missing values are filled.
-If method == Denoise, only values that are significantly different from the smoothed value are replaced with the smoothed value, where significant is defined as `abs(smoothed - original) > threshold * std(smoothed - original)`.
+If method == Denoise, missing values are filled and values that are significantly different from the smoothed value are replaced with the smoothed value, where significant is defined as `abs(smoothed - original) > threshold * std(smoothed - original)`.
 If method == FullSmooth, all values are smoothed using LOESS
 """
 function filldata(raw::TimeArray; method::FillMethod=Default, threshold = 2, α=0.3, nonzeroonly=true, startvals=Float64[], endvals=Float64[])
