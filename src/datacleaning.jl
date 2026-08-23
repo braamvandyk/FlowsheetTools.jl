@@ -1,7 +1,3 @@
-# # These are used only during testing
-# using Dates, Loess, Interpolations, Missings, TimeSeries, Statistics
-# using Plots, Distributions
-
 """
     calcHoL(timestamps)
 
@@ -22,7 +18,7 @@ end
 end
 
 """
-    filldata(raw; method=Default, threshold = 2, α=0.3, startvals=Float64[], endvals=Float64[])
+    filldata(raw::TimeArray; method=Default, threshold = 2, α=0.3, startvals=Float64[], endvals=Float64[])
 
 Fill a time series using LOESS with suggested start and end values or linear extrapolations.
 Values in `startvals`, if provided, will be used as the start values, if these are missing.
@@ -33,12 +29,11 @@ If method == Default, only missing values are filled.
 If method == Denoise, only values that are significantly different from the smoothed value are replaced with the smoothed value, where significant is defined as `abs(smoothed - original) > threshold * std(smoothed - original)`.
 If method == FullSmooth, all values are smoothed using LOESS
 """
-function filldata(raw::TimeArray; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
-    suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
+function filldata(raw::TimeArray; method::FillMethod=Default, threshold = 2, α=0.3, nonzeroonly=true, startvals=Float64[], endvals=Float64[])
 
     HoL = calcHoL(timestamp(raw))
     fulldata = similar(values(raw))
-    data = zeros(nonmissingtype(eltype(values(raw))), length(values(raw)))
+    data = zeros(nonmissingtype(eltype(values(raw))), size(values(raw)))
 
     for (i, col) in enumerate(colnames(raw))
         rawvals = values(raw[col])
@@ -90,7 +85,7 @@ function filldata(raw::TimeArray; fullsmooth=false, denoise=false, threshold = 2
             data[:, i] .= fulldata[:, i]
         else
             # Fill in missing data only
-            data[:, i] .= coalesce.(rawvals, fulldata[:, i])
+            data[:, i] = coalesce.(rawvals, fulldata[:, i])
         end
 
         if denoise
@@ -101,102 +96,32 @@ function filldata(raw::TimeArray; fullsmooth=false, denoise=false, threshold = 2
         end
     end
     
+    nonzeroonly && clamp!(data, 0, Inf) # Clamp negative values to zero
     return TimeArray(timestamp(raw), data, colnames(raw))
 end
 
-# function filldata(rawstream::Stream, basis=:mass; fullsmooth=false, denoise=false, threshold = 2, α=0.3, 
-#     suggest_start=false, startvals=Float64[], suggest_end=false, endvals=Float64[])
 
-#     if basis == :mass
-#         rawvals = values(rawstream.massflows)
-#         colnames = colnames(rawstream.massflows)
-#     else # basis == :mole
-#         rawvals = values(rawstream.moleflows)
-#         colnames = colnames(rawstream.moleflows)
-#     end
+function filldata!(input_filename, output_filename; method::FillMethod=Default, threshold = 2, α=0.3, nonzeroonly=true, startvals=Float64[], endvals=Float64[])
 
-#     rawdata = TimeArray(timestamp(rawstream), rawvals, colnames)
-#     filled = filldata(rawdata; fullsmooth=fullsmooth, denoise=denoise, threshold=threshold, α=α, suggest_start=suggest_start, startvals=startvals,
-#         suggest_end=suggest_end, endvals=endvals)
+    data, header = readdlm(lowercase(input_filename), ',', '\n', header=true)
+    comps = string.(header[2:end]) # readdlm returns an array of AbstractStrings for some reason
+    
+    temp = Array{Union{Float64, Missing}}(undef, size(data, 1))
 
-# end
+    for i in eachindex(data)
+        if data[i] == ""
+            data[i] = missing
+        end
+    end
 
+    data = sortslices(data, dims=1, lt=(x,y)->isless(x[1],y[1])) #sort by timestamps
+    timestamps = DateTime.(data[:, 1], "yyyy/mm/dd HH:MM")
+    flows = data[:, 2:end]
+    flows = convert(Matrix{Union{Float64, Missing}}, flows)
+    raw = TimeArray(timestamps, flows, comps)
 
-# # Generate dummy data with missing values
-# starttime = DateTime(2023, 1, 1, 0, 0)
-# endtime = DateTime(2023, 1, 12, 24, 0)
-# times = starttime:Hour(6):endtime
+    filled = filldata(raw; method=method, threshold=threshold, α=α, nonzeroonly=nonzeroonly, startvals=startvals, endvals=endvals)
+    writetimearray(filled, lowercase(output_filename), format="yyyy/mm/dd HH:MM", delim=',')
 
-# rawvals, purevals = gendata(times, 2, 0.75, 0.5)
-# raw = TimeArray(times, rawvals, [:raw])
-# pure = TimeArray(times, purevals, [:pure])
-# # raw = TimeArray(times, genstepdata(times, 20, 0.75, 0.5, 10) .+ 50.0, [:raw1])
-
-# sf1 = filldata(raw)
-# rename!(sf1, [:default03])
-
-# sf2 = filldata(raw, method = Denoise)
-# rename!(sf2, [:denoise03])
-
-# sf3 = filldata(raw, method = FullSmooth, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
-# rename!(sf3, [:fullsmooth03])
-
-# sf4 = filldata(raw, α=0.5)
-# rename!(sf4, [:default05])
-
-# sf5 = filldata(raw, method = Denoise, α=0.5)
-# rename!(sf5, [:denoise05])
-
-# sf6 = filldata(raw, method = FullSmooth, α=0.5, startvals=[0.0, 0.0], endvals=[0.0, 0.0])
-# rename!(sf6, [:fullsmooth05])
-
-# alldata = TimeSeries.merge(sf1, sf2, sf3, sf4, sf5, sf6, method=:left)
-
-# # https://stats.lse.ac.uk/fryzlewicz/wbs/wbs.pdf
-
-
-# begin
-#     alldata = TimeSeries.merge(sf1, sf2, sf3, sf4, sf5, sf6)
-#     l = @layout [a b c d;
-#                  e f g h]
-
-#     pltraw = let
-#         scatter(raw, leg=:bottomleft, size=(640, 480));
-#         plot!(pure[:pure])
-#     end;
-
-#     pltdef03 = let 
-#         scatter(alldata[:default03], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     pltnoise03 = let 
-#         scatter(alldata[:denoise03], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     pltsmooth03 = let 
-#         scatter(alldata[:fullsmooth03], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     pltdef05 = let 
-#         scatter(alldata[:default05], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     pltnoise05 = let 
-#         scatter(alldata[:denoise05], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     pltsmooth05 = let 
-#         scatter(alldata[:fullsmooth05], leg=:bottomleft, size=(640, 480))
-#         plot!(pure[:pure])
-#     end;
-
-#     plot(pltraw, pltdef03, pltnoise03, pltsmooth03, pltraw, pltdef05, pltnoise05, pltsmooth05, layout = l, size=(2560, 960))
-# end
-# savefig("cleandemo.png")
-
-# end # module
+    return nothing
+end

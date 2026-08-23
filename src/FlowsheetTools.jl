@@ -12,10 +12,11 @@ export  Component, ComponentList, @comp, writecomponent, readcomponentlist!, del
         UnitOp, UnitOpList, @unitop, mixer!, flowsplitter!, componentplitter!, Reaction, stoichiometric_reactor!,
             deleteunitop!, deleteunitops!,
         BalanceBoundary, BoundaryList, @boundary, showdata, deleteboundary!, deleteboundaries!, refreshboundaries!,
-        calccorrections, calccorrections_anchor, closemb!,
-        conversion, molar_selectivity, molar_selectivity_Cn_plus,
+            calccorrections, calccorrections_anchor, closemb!,
+            conversion, molar_selectivity, molar_selectivity_Cn_plus,
         Flowsheet, addunitop!, setorder!, generateBFD, componentnames,
-        members,filldata
+        FillMethod, Default, Denoise, FullSmooth, filldata,
+        members
 
 
 using ArgCheck,                 # Replace simple @asserts with ArgCheck
@@ -54,8 +55,6 @@ import Base.==
 include("Atoms.jl")
 using .Atoms
 
-# include("DataCleaning.jl")
-# using .DataCleaning
 
 include("prettyround.jl")
 include("components.jl")
@@ -65,7 +64,7 @@ include("boundaries.jl")
 include("kpis.jl")
 include("closure.jl")
 include("flowsheets.jl")
-# include("datacleaning.jl")
+include("datacleaning.jl")
 
 
 

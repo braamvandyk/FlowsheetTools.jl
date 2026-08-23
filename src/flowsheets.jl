@@ -31,17 +31,15 @@ function (fs::Flowsheet)(neworder = nothing; showoutput=true)
     showoutput && println("Executing:")
 
     if isnothing(neworder)
-        for i in 1:length(fs.rununits)
-            idx = findfirst(==(i), fs.runorder)
-            showoutput && println(i, "  ", fs.unitops[fs.rununits[idx]].name)
-            fs.unitops[fs.rununits[idx]]()
+        for i in fs.runorder
+            showoutput && println(i, "  ", fs.unitops[fs.rununits[i]].name)
+            fs.unitops[fs.rununits[i]]()
         end
     else
         @argcheck length(neworder) == length(fs.rununits) "neworder must have same length as rununits"
-        for i in 1:length(neworder)
-            idx = findfirst(==(i), neworder)
-            showoutput && println(i, "  ", fs.unitops[fs.rununits[idx]].name)
-            fs.unitops[fs.rununits[idx]]()
+        for i in neworder
+            showoutput && println(i, "  ", fs.unitops[fs.rununits[i]].name)
+            fs.unitops[fs.rununits[i]]()
         end
     end
 
